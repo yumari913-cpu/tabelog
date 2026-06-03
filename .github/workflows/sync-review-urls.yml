@@ -1,0 +1,43 @@
+name: Sync Tabelog Review URLs
+
+on:
+  schedule:
+    - cron: "0 10 * * 1"
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Sync review URLs
+        run: |
+          python scripts/sync_review_urls.py \
+            --reviewer-url "https://tabelog.com/rvwr/018712231/" \
+            --csv-path review_urls.csv \
+            --max-pages 10
+
+      - name: Commit review URL updates
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add review_urls.csv
+          if git diff --cached --quiet; then
+            echo "No new review URLs"
+          else
+            git commit -m "Sync Tabelog review URLs"
+            git push
+          fi
