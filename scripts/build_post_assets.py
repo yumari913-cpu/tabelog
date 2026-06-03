@@ -3,6 +3,7 @@ import json
 import shutil
 import sys
 from pathlib import Path
+from urllib.parse import urlparse
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -11,12 +12,23 @@ from tabelog_insta.media import generate_feed_cover_image, prepare_feed_photo, s
 from tabelog_insta.scraper import build_caption, parse_detail
 
 
+def validate_review_url(review_url):
+    parsed = urlparse(review_url)
+    if parsed.netloc != "tabelog.com" or "/rvwdtl/B" not in parsed.path:
+        raise SystemExit(
+            "食べログの口コミ詳細URLを入力してください。例: "
+            "https://tabelog.com/rvwr/018712231/rvwdtl/B527303939/"
+        )
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--review-url", required=True)
     parser.add_argument("--output-dir", default="generated")
     parser.add_argument("--caption-style", default="story", choices=["story", "short", "review"])
     args = parser.parse_args()
+
+    validate_review_url(args.review_url)
 
     config = load_config()
     review = parse_detail(args.review_url)
