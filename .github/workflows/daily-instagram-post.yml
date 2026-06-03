@@ -1,0 +1,140 @@
+name: Daily Instagram Post
+
+on:
+  schedule:
+    - cron: "0 11 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "trueなら投稿せず内容確認だけ"
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+concurrency:
+  group: daily-instagram-post
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Japanese fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Select next review
+        id: select
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/select_next_review.py \
+            --csv-path review_urls.csv \
+            --posted-path posted_review_urls.csv | tee selected_review.txt
+          HAS_NEXT="$(grep '^has_next=' selected_review.txt | cut -d= -f2-)"
+          REVIEW_URL="$(grep '^review_url=' selected_review.txt | cut -d= -f2- || true)"
+          RESTAURANT_NAME="$(grep '^restaurant_name=' selected_review.txt | cut -d= -f2- || true)"
+          echo "has_next=${HAS_NEXT}" >> "$GITHUB_OUTPUT"
+          echo "review_url=${REVIEW_URL}" >> "$GITHUB_OUTPUT"
+          {
+            echo "restaurant_name<<EOF"
+            echo "${RESTAURANT_NAME}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Stop when all reviews are posted
+        if: steps.select.outputs.has_next != 'true'
+        run: echo "All review URLs have already been posted."
+
+      - name: Build post assets
+        if: steps.select.outputs.has_next == 'true'
+        id: build
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/build_post_assets.py \
+            --review-url "${{ steps.select.outputs.review_url }}" \
+            --caption-style "story" | tee build_output.txt
+          REVIEW_ID="$(grep '^review_id=' build_output.txt | cut -d= -f2)"
+          MANIFEST="$(grep '^manifest=' build_output.txt | cut -d= -f2-)"
+          echo "review_id=${REVIEW_ID}" >> "$GITHUB_OUTPUT"
+          {
+            echo "manifest<<EOF"
+            echo "${MANIFEST}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Commit generated assets
+        if: steps.select.outputs.has_next == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add generated/
+          if git diff --cached --quiet; then
+            echo "No generated changes"
+          else
+            git commit -m "Add Instagram assets for ${{ steps.build.outputs.review_id }}"
+            git push
+          fi
+
+      - name: Publish or preview
+        if: steps.select.outputs.has_next == 'true'
+        env:
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          RAW_BASE="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/$(git rev-parse HEAD)"
+          if [ "${{ github.event.inputs.dry_run || 'false' }}" = "true" ]; then
+            python scripts/publish_generated_post.py \
+              --manifest "${{ steps.build.outputs.manifest }}" \
+              --raw-base-url "${RAW_BASE}" \
+              --dry-run
+          else
+            python scripts/publish_generated_post.py \
+              --manifest "${{ steps.build.outputs.manifest }}" \
+              --raw-base-url "${RAW_BASE}"
+          fi
+
+      - name: Mark review as posted
+        if: steps.select.outputs.has_next == 'true' && (github.event.inputs.dry_run || 'false') == 'false'
+        run: |
+          python scripts/mark_review_posted.py \
+            --posted-path posted_review_urls.csv \
+            --review-url "${{ steps.select.outputs.review_url }}" \
+            --restaurant-name "${{ steps.select.outputs.restaurant_name }}" \
+            --github-run "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      - name: Commit posted marker
+        if: steps.select.outputs.has_next == 'true' && (github.event.inputs.dry_run || 'false') == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add posted_review_urls.csv
+          if git diff --cached --quiet; then
+            echo "No posted marker changes"
+          else
+            git commit -m "Mark review as posted"
+            git push
+          fi
