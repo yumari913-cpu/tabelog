@@ -164,10 +164,34 @@ def first_area(area_category):
     return values[0] if values else area
 
 
-def caption_genre(area_category):
+def caption_genre(area_category, source_text=""):
     if "/" in area_category:
         genre = area_category.split("/")[-1].strip()
         return genre or "グルメ"
+    keyword_genres = [
+        ("寿司", "寿司"),
+        ("鮨", "寿司"),
+        ("ラーメン", "ラーメン"),
+        ("担々麺", "ラーメン"),
+        ("中華", "中華"),
+        ("焼肉", "焼肉"),
+        ("肉寿司", "肉料理"),
+        ("ハンバーグ", "ハンバーグ"),
+        ("パン", "ベーカリー"),
+        ("スイーツ", "スイーツ"),
+        ("カフェ", "カフェ"),
+        ("天ぷら", "居酒屋"),
+        ("昼飲み", "居酒屋"),
+        ("サク飲み", "居酒屋"),
+        ("酒場", "居酒屋"),
+        ("居酒屋", "居酒屋"),
+        ("日本酒", "居酒屋"),
+        ("火鍋", "火鍋"),
+        ("シュラスコ", "肉料理"),
+    ]
+    for keyword, genre in keyword_genres:
+        if keyword in source_text:
+            return genre
     return "グルメ"
 
 
@@ -210,7 +234,7 @@ def build_hashtags(area_category, genre, hashtags):
 def build_caption(restaurant_name, area_category, review_title, body, rating, review_url, hashtags, style="story"):
     area = area_category.split("/")[0].replace("（", "").replace("）", "").strip()
     lead_area = first_area(area_category)
-    genre = caption_genre(area_category)
+    genre = caption_genre(area_category, " ".join([restaurant_name, review_title, body]))
     title_source = review_title or f"{restaurant_name}で楽しむ{genre}"
     title = compact_summary(title_source, 34)
     report = compact_summary(body or review_title, 230)
