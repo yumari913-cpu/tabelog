@@ -1,0 +1,7 @@
+config.json
+data/
+media/
+.pycache/
+__pycache__/
+*.pyc
+.env
