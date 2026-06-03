@@ -1,4 +1,5 @@
 import json
+from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
@@ -22,8 +23,12 @@ class InstagramClient:
         url = f"https://graph.facebook.com/{self.graph_version}/{path}"
         data = urlencode(params).encode("utf-8")
         req = Request(url, data=data, method="POST")
-        with urlopen(req, timeout=60) as res:
-            return json.loads(res.read().decode("utf-8"))
+        try:
+            with urlopen(req, timeout=60) as res:
+                return json.loads(res.read().decode("utf-8"))
+        except HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(f"Instagram API error {exc.code}: {body}") from exc
 
     def create_media(self, **params):
         return self._post(f"{self.ig_user_id}/media", params)
