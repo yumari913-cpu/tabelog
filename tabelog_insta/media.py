@@ -64,13 +64,21 @@ def wrap_text(draw, text, text_font, max_width):
     return lines
 
 
-def draw_centered(draw, text, y, text_font, fill, max_width, line_gap=12, max_lines=3):
-    lines = wrap_text(draw, text, text_font, max_width)[:max_lines]
-    for line in lines:
-        box = draw.textbbox((0, 0), line, font=text_font)
-        draw.text(((1080 - (box[2] - box[0])) / 2, y), line, fill=fill, font=text_font)
-        y += (box[3] - box[1]) + line_gap
-    return y
+def cover_crop(image, width=1080, height=1080):
+    from PIL import Image
+
+    photo_ratio = image.width / image.height
+    target_ratio = width / height
+    if photo_ratio > target_ratio:
+        new_height = height
+        new_width = int(height * photo_ratio)
+    else:
+        new_width = width
+        new_height = int(width / photo_ratio)
+    image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+    left = (new_width - width) // 2
+    top = (new_height - height) // 2
+    return image.crop((left, top, left + width, top + height))
 
 
 def cover_area(review):
@@ -160,47 +168,51 @@ def generate_feed_cover_image(review):
         raise RuntimeError("Pillow is required to generate feed cover images.") from exc
 
     width = height = 1080
-    bg = Image.new("RGB", (width, height), "#111111")
+    bg = Image.new("RGB", (width, height), "#171717")
     image_urls = review.get("image_urls") or []
     if image_urls:
         photo_path = download_image(image_urls[0], review["review_id"], 0)
         photo = Image.open(photo_path).convert("RGB")
-        photo_ratio = photo.width / photo.height
-        target_ratio = width / height
-        if photo_ratio > target_ratio:
-            new_height = height
-            new_width = int(height * photo_ratio)
-        else:
-            new_width = width
-            new_height = int(width / photo_ratio)
-        photo = photo.resize((new_width, new_height), Image.Resampling.LANCZOS)
-        left = (new_width - width) // 2
-        top = (new_height - height) // 2
-        bg = photo.crop((left, top, left + width, top + height)).filter(ImageFilter.GaussianBlur(7))
-        overlay = Image.new("RGBA", (width, height), (0, 0, 0, 130))
-        bg = Image.alpha_composite(bg.convert("RGBA"), overlay).convert("RGB")
+        bg = cover_crop(photo, width, height)
+
+    shade = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    shade_px = shade.load()
+    for y in range(height):
+        top_alpha = max(0, 95 - y // 5)
+        bottom_alpha = max(0, int((y - 470) / 610 * 185))
+        alpha = max(top_alpha, bottom_alpha)
+        for x in range(width):
+            shade_px[x, y] = (0, 0, 0, min(alpha, 185))
+    bg = Image.alpha_composite(bg.convert("RGBA"), shade)
 
     draw = ImageDraw.Draw(bg)
     area_text = cover_area(review)
     restaurant_name = review.get("restaurant_name", "")
 
-    panel = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-    panel_draw = ImageDraw.Draw(panel)
-    panel_draw.rounded_rectangle((96, 296, 984, 784), radius=26, fill=(255, 255, 255, 226))
-    panel_draw.rounded_rectangle((116, 316, 964, 764), radius=22, outline=(255, 255, 255, 150), width=3)
-    bg = Image.alpha_composite(bg.convert("RGBA"), panel)
-    draw = ImageDraw.Draw(bg)
-
-    area_font = font(46, bold=True)
+    area_font = font(42, bold=True)
     area_box = draw.textbbox((0, 0), area_text, font=area_font)
-    pill_w = area_box[2] - area_box[0] + 74
-    pill_x = (width - pill_w) / 2
-    draw.rounded_rectangle((pill_x, 238, pill_x + pill_w, 308), radius=35, fill="#111111")
-    draw.text((pill_x + 37, 249), area_text, fill="#ffffff", font=area_font)
+    pill_w = area_box[2] - area_box[0] + 62
+    draw.rounded_rectangle((64, 64, 64 + pill_w, 132), radius=34, fill=(0, 0, 0, 190))
+    draw.text((95, 78), area_text, fill="#ffffff", font=area_font)
 
-    draw_centered(draw, restaurant_name, 440, font(80, bold=True), "#111111", 760, line_gap=18, max_lines=3)
-    draw.line((254, 706, 826, 706), fill="#111111", width=3)
-    draw.ellipse((526, 695, 554, 723), fill="#111111")
+    name_font = font(84, bold=True)
+    name_lines = wrap_text(draw, restaurant_name, name_font, 900)[:3]
+    line_heights = [draw.textbbox((0, 0), line, font=name_font)[3] for line in name_lines]
+    total_height = sum(line_heights) + max(0, len(name_lines) - 1) * 16
+    y = 880 - total_height
+    for line in name_lines:
+        draw.text(
+            (64, y),
+            line,
+            fill="#ffffff",
+            font=name_font,
+            stroke_width=5,
+            stroke_fill=(0, 0, 0, 185),
+        )
+        y += draw.textbbox((0, 0), line, font=name_font)[3] + 16
+
+    draw.line((64, 934, 288, 934), fill="#ffffff", width=5)
+    draw.text((64, 958), "TASTE NOTE", fill=(255, 255, 255, 218), font=font(30, bold=True))
 
     output = MEDIA_DIR / f"{review['review_id']}_feed_cover.jpg"
     bg.convert("RGB").save(output, quality=94)
