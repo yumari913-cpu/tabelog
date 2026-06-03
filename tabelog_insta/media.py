@@ -236,7 +236,7 @@ def prepare_feed_photo(image_url, review_id, index, width=1080, height=1350):
 
     source = download_image(image_url, review_id, index + 200)
     with Image.open(source) as image:
-        canvas = fit_image_to_canvas(image, width, height)
+        canvas = cover_crop(image.convert("RGB"), width, height)
     output = MEDIA_DIR / f"{review_id}_feed_photo_{index:02d}.jpg"
     canvas.save(output, quality=94)
     return output
