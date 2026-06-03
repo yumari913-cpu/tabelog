@@ -10,11 +10,13 @@ REGION="${REGION:-asia-northeast1}"
 SERVICE="${SERVICE:-tabelog-instagram}"
 BUCKET="${BUCKET:-${PROJECT_ID}-tabelog-instagram-media}"
 REVIEWER_URL="${REVIEWER_URL:-https://tabelog.com/rvwr/018712231/}"
+ARTIFACT_REPOSITORY="${ARTIFACT_REPOSITORY:-tabelog-instagram}"
 
 gcloud config set project "${PROJECT_ID}"
 
 gcloud services enable \
   run.googleapis.com \
+  artifactregistry.googleapis.com \
   cloudbuild.googleapis.com \
   cloudscheduler.googleapis.com \
   iamcredentials.googleapis.com \
@@ -26,7 +28,12 @@ gcloud storage buckets add-iam-policy-binding "gs://${BUCKET}" \
   --member="allUsers" \
   --role="roles/storage.objectViewer"
 
-IMAGE="gcr.io/${PROJECT_ID}/${SERVICE}:latest"
+gcloud artifacts repositories create "${ARTIFACT_REPOSITORY}" \
+  --repository-format=docker \
+  --location="${REGION}" \
+  --description="Docker images for ${SERVICE}" || true
+
+IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPOSITORY}/${SERVICE}:latest"
 gcloud builds submit --tag "${IMAGE}"
 
 gcloud run deploy "${SERVICE}" \
