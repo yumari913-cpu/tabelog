@@ -15,6 +15,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--review-url", required=True)
     parser.add_argument("--output-dir", default="generated")
+    parser.add_argument("--caption-style", default="story", choices=["story", "short", "review"])
     args = parser.parse_args()
 
     config = load_config()
@@ -32,6 +33,7 @@ def main():
         review.get("rating", ""),
         review.get("review_url", ""),
         config.get("hashtags", []),
+        style=args.caption_style,
     )
 
     output_dir = Path(args.output_dir)
