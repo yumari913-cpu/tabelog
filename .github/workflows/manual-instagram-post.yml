@@ -15,6 +15,15 @@ on:
         options:
           - "true"
           - "false"
+      caption_style:
+        description: "キャプション文体"
+        required: true
+        default: "story"
+        type: choice
+        options:
+          - "story"
+          - "short"
+          - "review"
 
 jobs:
   post:
@@ -37,7 +46,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python scripts/build_post_assets.py --review-url "${{ inputs.review_url }}" | tee build_output.txt
+          python scripts/build_post_assets.py \
+            --review-url "${{ inputs.review_url }}" \
+            --caption-style "${{ inputs.caption_style }}" | tee build_output.txt
           REVIEW_ID="$(grep '^review_id=' build_output.txt | cut -d= -f2)"
           MANIFEST="$(grep '^manifest=' build_output.txt | cut -d= -f2)"
           echo "review_id=${REVIEW_ID}" >> "$GITHUB_OUTPUT"
