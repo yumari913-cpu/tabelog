@@ -64,7 +64,7 @@ def wrap_text(draw, text, text_font, max_width):
     return lines
 
 
-def cover_crop(image, width=1080, height=1080):
+def cover_crop(image, width=1080, height=1920):
     from PIL import Image
 
     photo_ratio = image.width / image.height
@@ -160,6 +160,18 @@ def select_best_image_urls(image_urls, review_id, limit=6):
     return [image_url for _, _, image_url in candidates[:limit]]
 
 
+def fit_image_to_canvas(image, width=1080, height=1920, background="#fffaf0"):
+    from PIL import Image
+
+    image = image.convert("RGB")
+    image.thumbnail((width, height), Image.Resampling.LANCZOS)
+    canvas = Image.new("RGB", (width, height), background)
+    x = (width - image.width) // 2
+    y = (height - image.height) // 2
+    canvas.paste(image, (x, y))
+    return canvas
+
+
 def generate_feed_cover_image(review):
     ensure_dirs()
     try:
@@ -167,7 +179,7 @@ def generate_feed_cover_image(review):
     except Exception as exc:
         raise RuntimeError("Pillow is required to generate feed cover images.") from exc
 
-    width = height = 1080
+    width, height = 1080, 1920
     bg = Image.new("RGB", (width, height), "#171717")
     image_urls = review.get("image_urls") or []
     if image_urls:
@@ -180,9 +192,9 @@ def generate_feed_cover_image(review):
 
     overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     overlay_draw = ImageDraw.Draw(overlay)
-    overlay_draw.rectangle((0, 0, width, 110), fill=(0, 0, 0, 78))
-    overlay_draw.rounded_rectangle((52, 592, 1028, 1028), radius=38, fill=(255, 252, 245, 242))
-    overlay_draw.rounded_rectangle((78, 618, 1002, 1002), radius=28, outline=(18, 18, 18, 42), width=3)
+    overlay_draw.rectangle((0, 0, width, 140), fill=(0, 0, 0, 78))
+    overlay_draw.rounded_rectangle((52, 1110, 1028, 1810), radius=42, fill=(255, 252, 245, 244))
+    overlay_draw.rounded_rectangle((78, 1138, 1002, 1782), radius=30, outline=(18, 18, 18, 42), width=3)
     bg = Image.alpha_composite(bg.convert("RGBA"), overlay)
     draw = ImageDraw.Draw(bg)
 
@@ -191,14 +203,14 @@ def generate_feed_cover_image(review):
     area_label = f"{area_label}グルメ"
     area_box = draw.textbbox((0, 0), area_label, font=area_font)
     pill_w = area_box[2] - area_box[0] + 62
-    draw.rounded_rectangle((88, 548, 88 + pill_w, 616), radius=34, fill="#111111")
-    draw.text((119, 562), area_label, fill="#ffffff", font=area_font)
+    draw.rounded_rectangle((88, 1064, 88 + pill_w, 1132), radius=34, fill="#111111")
+    draw.text((119, 1078), area_label, fill="#ffffff", font=area_font)
 
     name_font = font(92, bold=True)
     name_lines = wrap_text(draw, restaurant_name, name_font, 850)[:3]
     line_heights = [draw.textbbox((0, 0), line, font=name_font)[3] for line in name_lines]
     total_height = sum(line_heights) + max(0, len(name_lines) - 1) * 18
-    y = 790 - total_height / 2
+    y = 1450 - total_height / 2
     for line in name_lines:
         box = draw.textbbox((0, 0), line, font=name_font)
         draw.text(
@@ -209,10 +221,24 @@ def generate_feed_cover_image(review):
         )
         y += draw.textbbox((0, 0), line, font=name_font)[3] + 18
 
-    draw.line((168, 932, 912, 932), fill="#111111", width=4)
+    draw.line((168, 1690, 912, 1690), fill="#111111", width=4)
 
     output = MEDIA_DIR / f"{review['review_id']}_feed_cover.jpg"
     bg.convert("RGB").save(output, quality=94)
+    return output
+
+
+def prepare_feed_photo(image_url, review_id, index, width=1080, height=1920):
+    try:
+        from PIL import Image
+    except Exception as exc:
+        raise RuntimeError("Pillow is required to prepare feed images.") from exc
+
+    source = download_image(image_url, review_id, index + 200)
+    with Image.open(source) as image:
+        canvas = fit_image_to_canvas(image, width, height)
+    output = MEDIA_DIR / f"{review_id}_feed_photo_{index:02d}.jpg"
+    canvas.save(output, quality=94)
     return output
 
 
