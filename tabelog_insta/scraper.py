@@ -151,52 +151,117 @@ def area_hashtags(area_category):
     return tags
 
 
-def build_caption(restaurant_name, area_category, review_title, body, rating, review_url, hashtags, style="story"):
+def compact_summary(text, limit=170):
+    summary = re.sub(r"\s+", " ", text or "").strip()
+    if len(summary) > limit:
+        summary = summary[:limit].rstrip() + "..."
+    return summary
+
+
+def first_area(area_category):
     area = area_category.split("/")[0].replace("（", "").replace("）", "").strip()
-    genre = area_category.split("/")[-1].strip() if "/" in area_category else ""
-    summary_source = body or review_title
-    summary = re.sub(r"\s+", " ", summary_source).strip()
-    if len(summary) > 170:
-        summary = summary[:170].rstrip() + "..."
+    values = [value for value in re.split(r"[、,\s]+", area) if value]
+    return values[0] if values else area
 
-    parts = [f"【{restaurant_name}】"]
 
-    if style == "short":
-        if area:
-            parts.append(f"{area}で見つけた気になる一軒。")
-        if review_title:
-            parts.append(review_title)
-        if summary:
-            parts.append(summary)
-        parts.append("気になったら保存して、次のお店候補にどうぞ。")
-    elif style == "review":
-        if area:
-            parts.append(f"場所: {area}")
-        if genre:
-            parts.append(f"ジャンル: {genre}")
-        if review_title:
-            parts.append(f"今回のひとこと\n{review_title}")
-        if summary:
-            parts.append(f"推しポイント\n{summary}")
-        parts.append("こんな時におすすめ\n・近くでごはんを探している時\n・外さないお店を保存しておきたい時")
-        parts.append("気になったら保存して、次のお店選びにどうぞ。")
-    else:
-        if area:
-            parts.append(f"{area}でごはん探しの日に行きたいお店。")
-        if review_title:
-            parts.append(f"今回の気分\n{review_title}")
-        if summary:
-            parts.append(f"ここが良かった\n{summary}")
-        parts.append("次の外食候補に、そっと保存しておきたい一軒です。")
+def caption_genre(area_category):
+    if "/" in area_category:
+        genre = area_category.split("/")[-1].strip()
+        return genre or "グルメ"
+    return "グルメ"
+
+
+def build_hashtags(area_category, genre, hashtags):
+    base_tags = area_hashtags(area_category)
+    genre_tags = []
+    for value in re.split(r"[、,\s]+", genre):
+        value = re.sub(r"[^\wぁ-んァ-ヶ一-龠ー]", "", value)
+        if value:
+            genre_tags.append(f"#{value}")
+
+    defaults = [
+        "#食べログ",
+        "#グルメ",
+        "#東京グルメ",
+        "#東京ランチ",
+        "#東京ディナー",
+        "#外食記録",
+        "#グルメ好きな人と繋がりたい",
+        "#グルメ巡り",
+        "#ランチ巡り",
+        "#ディナー巡り",
+        "#保存推奨",
+        "#正直グルメ",
+        "#コスパグルメ",
+        "#デートごはん",
+        "#ひとりごはん",
+        "#居酒屋巡り",
+        "#食べ歩き",
+        "#おいしいもの好きな人と繋がりたい",
+    ]
 
     tags = []
-    for tag in area_hashtags(area_category) + list(hashtags):
+    for tag in base_tags + genre_tags + list(hashtags) + defaults:
         if tag and tag not in tags:
             tags.append(tag)
-    if tags:
-        parts.append(" ".join(tags[:25]))
+    return tags[:20]
 
-    parts.append(f"食べログ詳細: {review_url}")
+
+def build_caption(restaurant_name, area_category, review_title, body, rating, review_url, hashtags, style="story"):
+    area = area_category.split("/")[0].replace("（", "").replace("）", "").strip()
+    lead_area = first_area(area_category)
+    genre = caption_genre(area_category)
+    title_source = review_title or f"{restaurant_name}で楽しむ{genre}"
+    title = compact_summary(title_source, 34)
+    report = compact_summary(body or review_title, 230)
+
+    if lead_area and genre:
+        catch = f"【{lead_area}×{genre}】保存して行きたい、{title}"
+    elif lead_area:
+        catch = f"【{lead_area}グルメ】保存して行きたい、{title}"
+    else:
+        catch = f"【保存推奨グルメ】{title}"
+
+    intro_area = lead_area or "このエリア"
+    parts = [
+        f"{catch} 🍽️",
+        f"【導入】\nここ知らなきゃ損。{intro_area}で次のごはん候補に入れたい一軒です。",
+    ]
+
+    if report:
+        parts.append(
+            "【料理のレポ】\n見た目から食欲をそそられて、ひと口目でしっかり満足感。 "
+            f"{report}"
+        )
+    else:
+        parts.append("【料理のレポ】\n料理の詳しい内容は（※要確認）。気になるメニューがあれば、投稿前に追記するとより保存されやすくなります。")
+
+    scene_lines = [
+        "【お店の雰囲気・利用シーン】",
+        "気取らず楽しめる雰囲気で、友達とのごはんや仕事帰りの一軒にも使いやすそう。✨",
+        "ひとりでサクッと寄りたい日にも、誰かとゆっくり話したい日にも候補に入れておきたいお店です。",
+    ]
+    parts.append("\n".join(scene_lines))
+
+    parts.append("【保存の促し】\n後で見返せるように【保存】がおすすめです。次のお店選びに使ってください。")
+
+    parts.append(
+        "\n".join(
+            [
+                "【店舗情報】",
+                f"・店舗名：{restaurant_name or '（※要確認）'}",
+                f"・アクセス：{area or '（※要確認）'}",
+                "・営業時間：（※要確認）",
+                "・定休日：（※要確認）",
+                "・客層・混雑状況：（※要確認）",
+                f"・食べログ詳細：{review_url}",
+            ]
+        )
+    )
+
+    tag_line = " ".join(build_hashtags(area_category, genre, hashtags))
+    if tag_line:
+        parts.append("【ハッシュタグ】\n" + tag_line)
     return "\n\n".join(parts)
 
 
