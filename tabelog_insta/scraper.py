@@ -167,7 +167,8 @@ def first_area(area_category):
 def caption_genre(area_category, source_text=""):
     if "/" in area_category:
         genre = area_category.split("/")[-1].strip()
-        return genre or "グルメ"
+        if genre and genre != "グルメ":
+            return genre
     keyword_genres = [
         ("寿司", "寿司"),
         ("鮨", "寿司"),
