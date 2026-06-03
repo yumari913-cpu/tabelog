@@ -55,9 +55,13 @@ jobs:
             --review-url "${{ inputs.review_url }}" \
             --caption-style "${{ inputs.caption_style }}" | tee build_output.txt
           REVIEW_ID="$(grep '^review_id=' build_output.txt | cut -d= -f2)"
-          MANIFEST="$(grep '^manifest=' build_output.txt | cut -d= -f2)"
+          MANIFEST="$(grep '^manifest=' build_output.txt | cut -d= -f2-)"
           echo "review_id=${REVIEW_ID}" >> "$GITHUB_OUTPUT"
-          echo "manifest=${MANIFEST}" >> "$GITHUB_OUTPUT"
+          {
+            echo "manifest<<EOF"
+            echo "${MANIFEST}"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Commit generated assets
         shell: bash
