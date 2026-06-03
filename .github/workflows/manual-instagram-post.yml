@@ -45,9 +45,15 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add generated/
-          git commit -m "Add Instagram assets for ${{ steps.build.outputs.review_id }}" || echo "No generated changes"
-          git push
+          if [ -d generated ]; then
+            git add generated/
+          fi
+          if git diff --cached --quiet; then
+            echo "No generated changes"
+          else
+            git commit -m "Add Instagram assets for ${{ steps.build.outputs.review_id }}"
+            git push
+          fi
 
       - name: Publish or preview
         env:
