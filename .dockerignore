@@ -1,0 +1,8 @@
+.git
+.github
+.pycache
+__pycache__
+*.pyc
+config.json
+media
+data
