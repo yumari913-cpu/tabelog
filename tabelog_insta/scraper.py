@@ -151,7 +151,7 @@ def area_hashtags(area_category):
     return tags
 
 
-def build_caption(restaurant_name, area_category, review_title, body, rating, review_url, hashtags):
+def build_caption(restaurant_name, area_category, review_title, body, rating, review_url, hashtags, style="story"):
     area = area_category.split("/")[0].replace("（", "").replace("）", "").strip()
     genre = area_category.split("/")[-1].strip() if "/" in area_category else ""
     summary_source = body or review_title
@@ -159,22 +159,35 @@ def build_caption(restaurant_name, area_category, review_title, body, rating, re
     if len(summary) > 170:
         summary = summary[:170].rstrip() + "..."
 
-    parts = []
-    parts.append(f"【{restaurant_name}】")
+    parts = [f"【{restaurant_name}】"]
 
-    if area:
-        parts.append(f"場所: {area}")
-    if genre:
-        parts.append(f"ジャンル: {genre}")
-
-    if review_title:
-        parts.append(f"今回のひとこと\n{review_title}")
-
-    if summary:
-        parts.append(f"推しポイント\n{summary}")
-
-    parts.append("こんな時におすすめ\n・近くでごはんを探している時\n・外さないお店を保存しておきたい時")
-    parts.append("気になったら保存して、次のお店選びにどうぞ。")
+    if style == "short":
+        if area:
+            parts.append(f"{area}で見つけた気になる一軒。")
+        if review_title:
+            parts.append(review_title)
+        if summary:
+            parts.append(summary)
+        parts.append("気になったら保存して、次のお店候補にどうぞ。")
+    elif style == "review":
+        if area:
+            parts.append(f"場所: {area}")
+        if genre:
+            parts.append(f"ジャンル: {genre}")
+        if review_title:
+            parts.append(f"今回のひとこと\n{review_title}")
+        if summary:
+            parts.append(f"推しポイント\n{summary}")
+        parts.append("こんな時におすすめ\n・近くでごはんを探している時\n・外さないお店を保存しておきたい時")
+        parts.append("気になったら保存して、次のお店選びにどうぞ。")
+    else:
+        if area:
+            parts.append(f"{area}でごはん探しの日に行きたいお店。")
+        if review_title:
+            parts.append(f"今回の気分\n{review_title}")
+        if summary:
+            parts.append(f"ここが良かった\n{summary}")
+        parts.append("次の外食候補に、そっと保存しておきたい一軒です。")
 
     tags = []
     for tag in area_hashtags(area_category) + list(hashtags):
