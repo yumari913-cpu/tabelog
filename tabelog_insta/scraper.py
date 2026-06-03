@@ -136,9 +136,19 @@ def parse_detail(review_url):
         "body": body,
         "rating": rating,
         "visited_date": visited_date,
-        "image_urls": image_urls[:10],
+        "image_urls": image_urls[:20],
         "caption": build_caption(restaurant_name, area_category, review_title, body, rating, review_url, []),
     }
+
+
+def area_hashtags(area_category):
+    area = area_category.split("/")[0].replace("（", "").replace("）", "").strip()
+    tags = []
+    for value in re.split(r"[、,\s]+", area):
+        value = re.sub(r"[^\wぁ-んァ-ヶ一-龠ー]", "", value)
+        if value and f"#{value}" not in tags:
+            tags.append(f"#{value}")
+    return tags
 
 
 def build_caption(restaurant_name, area_category, review_title, body, rating, review_url, hashtags):
@@ -150,10 +160,7 @@ def build_caption(restaurant_name, area_category, review_title, body, rating, re
         summary = summary[:170].rstrip() + "..."
 
     parts = []
-    heading = f"【{restaurant_name}】"
-    if rating:
-        heading += f"\n食べログ評価: {rating}"
-    parts.append(heading)
+    parts.append(f"【{restaurant_name}】")
 
     if area:
         parts.append(f"場所: {area}")
@@ -169,9 +176,12 @@ def build_caption(restaurant_name, area_category, review_title, body, rating, re
     parts.append("こんな時におすすめ\n・近くでごはんを探している時\n・外さないお店を保存しておきたい時")
     parts.append("気になったら保存して、次のお店選びにどうぞ。")
 
-    if hashtags:
-        tag_text = " ".join(hashtags[:25])
-        parts.append(tag_text)
+    tags = []
+    for tag in area_hashtags(area_category) + list(hashtags):
+        if tag and tag not in tags:
+            tags.append(tag)
+    if tags:
+        parts.append(" ".join(tags[:25]))
 
     parts.append(f"食べログ詳細: {review_url}")
     return "\n\n".join(parts)
