@@ -1,0 +1,67 @@
+name: Manual Instagram Post
+
+on:
+  workflow_dispatch:
+    inputs:
+      review_url:
+        description: "食べログ口コミ詳細URL"
+        required: true
+        type: string
+      dry_run:
+        description: "trueなら投稿せず内容確認だけ"
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build post assets
+        id: build
+        run: |
+          python scripts/build_post_assets.py --review-url "${{ inputs.review_url }}" | tee build_output.txt
+          REVIEW_ID="$(grep '^review_id=' build_output.txt | cut -d= -f2)"
+          MANIFEST="$(grep '^manifest=' build_output.txt | cut -d= -f2)"
+          echo "review_id=${REVIEW_ID}" >> "$GITHUB_OUTPUT"
+          echo "manifest=${MANIFEST}" >> "$GITHUB_OUTPUT"
+
+      - name: Commit generated assets
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add generated/
+          git commit -m "Add Instagram assets for ${{ steps.build.outputs.review_id }}" || echo "No generated changes"
+          git push
+
+      - name: Publish or preview
+        env:
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+        run: |
+          RAW_BASE="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/$(git rev-parse HEAD)"
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            python scripts/publish_generated_post.py \
+              --manifest "${{ steps.build.outputs.manifest }}" \
+              --raw-base-url "${RAW_BASE}" \
+              --dry-run
+          else
+            python scripts/publish_generated_post.py \
+              --manifest "${{ steps.build.outputs.manifest }}" \
+              --raw-base-url "${RAW_BASE}"
+          fi
