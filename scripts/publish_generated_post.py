@@ -18,8 +18,13 @@ def main():
 
     manifest_path = Path(args.manifest)
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    cover_url = f"{args.raw_base_url.rstrip('/')}/{manifest['cover_path']}"
-    image_urls = [cover_url] + manifest.get("image_urls", [])[:9]
+    raw_base = args.raw_base_url.rstrip("/")
+    cover_url = f"{raw_base}/{manifest['cover_path']}"
+    image_paths = manifest.get("image_paths", [])
+    if image_paths:
+        image_urls = [cover_url] + [f"{raw_base}/{path}" for path in image_paths[:9]]
+    else:
+        image_urls = [cover_url] + manifest.get("image_urls", [])[:9]
 
     if args.dry_run:
         print("DRY RUN")
