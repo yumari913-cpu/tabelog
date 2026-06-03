@@ -7,7 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from tabelog_insta.config import load_config
-from tabelog_insta.media import generate_feed_cover_image, select_best_image_urls
+from tabelog_insta.media import generate_feed_cover_image, prepare_feed_photo, select_best_image_urls
 from tabelog_insta.scraper import build_caption, parse_detail
 
 
@@ -46,12 +46,20 @@ def main():
     caption_path = output_dir / f"{review['review_id']}_caption.txt"
     caption_path.write_text(review["caption"], encoding="utf-8")
 
+    prepared_image_paths = []
+    for index, image_url in enumerate(review.get("image_urls", [])[:6], start=1):
+        photo_path = prepare_feed_photo(image_url, review["review_id"], index)
+        public_photo = output_dir / f"{review['review_id']}_photo_{index:02d}.jpg"
+        shutil.copyfile(photo_path, public_photo)
+        prepared_image_paths.append(str(public_photo))
+
     manifest = {
         "review_id": review["review_id"],
         "review_url": review["review_url"],
         "restaurant_name": review.get("restaurant_name", ""),
         "caption": review["caption"],
         "cover_path": str(public_cover),
+        "image_paths": prepared_image_paths,
         "image_urls": review.get("image_urls", [])[:6],
     }
     manifest_path = output_dir / f"{review['review_id']}_post.json"
