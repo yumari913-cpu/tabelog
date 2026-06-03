@@ -1,5 +1,6 @@
 import hashlib
 import io
+import math
 import shutil
 import subprocess
 import zipfile
@@ -63,10 +64,92 @@ def wrap_text(draw, text, text_font, max_width):
     return lines
 
 
+def draw_centered(draw, text, y, text_font, fill, max_width, line_gap=12, max_lines=3):
+    lines = wrap_text(draw, text, text_font, max_width)[:max_lines]
+    for line in lines:
+        box = draw.textbbox((0, 0), line, font=text_font)
+        draw.text(((1080 - (box[2] - box[0])) / 2, y), line, fill=fill, font=text_font)
+        y += (box[3] - box[1]) + line_gap
+    return y
+
+
 def cover_area(review):
     raw = review.get("area_category", "")
     area = raw.split("/")[0].replace("（", "").replace("）", "").strip()
     return area or "TOKYO"
+
+
+def normalize_image_url(url):
+    return url.split("?", 1)[0].replace("640x640_rect_", "").replace("320x320_rect_", "")
+
+
+def average_hash(image, size=8):
+    image = image.convert("L").resize((size, size))
+    pixels = list(image.getdata())
+    avg = sum(pixels) / len(pixels)
+    return "".join("1" if pixel >= avg else "0" for pixel in pixels)
+
+
+def hash_distance(left, right):
+    return sum(1 for a, b in zip(left, right) if a != b)
+
+
+def image_quality_score(image):
+    try:
+        from PIL import ImageStat, ImageFilter
+    except Exception:
+        return 0
+
+    width, height = image.size
+    pixels = width * height
+    aspect = width / height if height else 1
+    aspect_score = 1.0 - min(abs(aspect - 1.0), 0.65) / 0.65
+
+    gray = image.convert("L")
+    brightness = ImageStat.Stat(gray).mean[0]
+    brightness_score = 1.0 - min(abs(brightness - 145), 120) / 120
+
+    edges = gray.filter(ImageFilter.FIND_EDGES)
+    sharpness = ImageStat.Stat(edges).stddev[0]
+    sharpness_score = min(sharpness / 42, 1.0)
+
+    resolution_score = min(math.sqrt(pixels) / 1200, 1.0)
+    return resolution_score * 0.35 + sharpness_score * 0.3 + brightness_score * 0.2 + aspect_score * 0.15
+
+
+def select_best_image_urls(image_urls, review_id, limit=6):
+    try:
+        from PIL import Image
+    except Exception:
+        return image_urls[:limit]
+
+    candidates = []
+    seen_urls = set()
+    seen_hashes = []
+
+    for index, image_url in enumerate(image_urls):
+        normalized = normalize_image_url(image_url)
+        if normalized in seen_urls:
+            continue
+        seen_urls.add(normalized)
+
+        try:
+            image_path = download_image(image_url, review_id, index + 100)
+            with Image.open(image_path) as image:
+                image = image.convert("RGB")
+                ahash = average_hash(image)
+                if any(hash_distance(ahash, seen) <= 4 for seen in seen_hashes):
+                    continue
+                seen_hashes.append(ahash)
+                candidates.append((image_quality_score(image), index, image_url))
+        except Exception:
+            continue
+
+    if not candidates:
+        return image_urls[:limit]
+
+    candidates.sort(key=lambda item: (-item[0], item[1]))
+    return [image_url for _, _, image_url in candidates[:limit]]
 
 
 def generate_feed_cover_image(review):
@@ -77,7 +160,7 @@ def generate_feed_cover_image(review):
         raise RuntimeError("Pillow is required to generate feed cover images.") from exc
 
     width = height = 1080
-    bg = Image.new("RGB", (width, height), "#f97316")
+    bg = Image.new("RGB", (width, height), "#111111")
     image_urls = review.get("image_urls") or []
     if image_urls:
         photo_path = download_image(image_urls[0], review["review_id"], 0)
@@ -90,44 +173,37 @@ def generate_feed_cover_image(review):
         else:
             new_width = width
             new_height = int(width / photo_ratio)
-        photo = photo.resize((new_width, new_height))
+        photo = photo.resize((new_width, new_height), Image.Resampling.LANCZOS)
         left = (new_width - width) // 2
         top = (new_height - height) // 2
-        bg = photo.crop((left, top, left + width, top + height)).filter(ImageFilter.GaussianBlur(10))
-        overlay = Image.new("RGBA", (width, height), (0, 0, 0, 92))
+        bg = photo.crop((left, top, left + width, top + height)).filter(ImageFilter.GaussianBlur(7))
+        overlay = Image.new("RGBA", (width, height), (0, 0, 0, 130))
         bg = Image.alpha_composite(bg.convert("RGBA"), overlay).convert("RGB")
 
     draw = ImageDraw.Draw(bg)
-    draw.rectangle((54, 54, 1026, 1026), outline="#ffffff", width=5)
-    draw.rectangle((88, 760, 992, 936), fill="#ffffff")
-
     area_text = cover_area(review)
-    draw.text((90, 120), area_text, fill="#ffffff", font=font(52, bold=True))
-    draw.line((90, 192, 990, 192), fill="#ffffff", width=4)
+    restaurant_name = review.get("restaurant_name", "")
 
-    name_font = font(78, bold=True)
-    name_lines = wrap_text(draw, review.get("restaurant_name", ""), name_font, 820)[:3]
-    y = 360
-    for line in name_lines:
-        box = draw.textbbox((0, 0), line, font=name_font)
-        draw.text(((width - (box[2] - box[0])) / 2, y), line, fill="#ffffff", font=name_font)
-        y += 96
+    panel = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    panel_draw = ImageDraw.Draw(panel)
+    panel_draw.rounded_rectangle((96, 296, 984, 784), radius=26, fill=(255, 255, 255, 226))
+    panel_draw.rounded_rectangle((116, 316, 964, 764), radius=22, outline=(255, 255, 255, 150), width=3)
+    bg = Image.alpha_composite(bg.convert("RGBA"), panel)
+    draw = ImageDraw.Draw(bg)
 
-    genre = review.get("area_category", "").split("/")[-1].strip()
-    if genre:
-        genre_font = font(34)
-        genre_lines = wrap_text(draw, genre, genre_font, 760)[:2]
-        y = 790
-        for line in genre_lines:
-            draw.text((128, y), line, fill="#9a3412", font=genre_font)
-            y += 44
+    area_font = font(46, bold=True)
+    area_box = draw.textbbox((0, 0), area_text, font=area_font)
+    pill_w = area_box[2] - area_box[0] + 74
+    pill_x = (width - pill_w) / 2
+    draw.rounded_rectangle((pill_x, 238, pill_x + pill_w, 308), radius=35, fill="#111111")
+    draw.text((pill_x + 37, 249), area_text, fill="#ffffff", font=area_font)
 
-    rating = review.get("rating")
-    if rating:
-        draw.text((128, 886), f"TABELOG {rating}", fill="#ea580c", font=font(38, bold=True))
+    draw_centered(draw, restaurant_name, 440, font(80, bold=True), "#111111", 760, line_gap=18, max_lines=3)
+    draw.line((254, 706, 826, 706), fill="#111111", width=3)
+    draw.ellipse((526, 695, 554, 723), fill="#111111")
 
     output = MEDIA_DIR / f"{review['review_id']}_feed_cover.jpg"
-    bg.save(output, quality=94)
+    bg.convert("RGB").save(output, quality=94)
     return output
 
 
