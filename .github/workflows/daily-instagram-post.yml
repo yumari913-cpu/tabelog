@@ -2,7 +2,7 @@ name: Daily Instagram Post
 
 on:
   schedule:
-    - cron: "31 11 * * *"
+    - cron: "45 11 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
