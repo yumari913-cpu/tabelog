@@ -46,6 +46,8 @@ def main():
         review.get("review_url", ""),
         config.get("hashtags", []),
         style=args.caption_style,
+        business_hours=review.get("business_hours", ""),
+        regular_holiday=review.get("regular_holiday", ""),
     )
 
     output_dir = Path(args.output_dir)
