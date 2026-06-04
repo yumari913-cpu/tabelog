@@ -291,49 +291,67 @@ def export_instagram_package(review):
 def generate_story_image(review):
     ensure_dirs()
     try:
-        from PIL import Image, ImageDraw, ImageFont
+        from PIL import Image, ImageDraw, ImageFilter
     except Exception as exc:
         raise RuntimeError("Pillow is required to generate story images.") from exc
 
     width, height = 1080, 1920
-    bg = Image.new("RGB", (width, height), "#fff7ed")
-    draw = ImageDraw.Draw(bg)
-
-    try:
-        font_title = font(68, bold=True)
-        font_body = font(42)
-        font_small = font(34)
-    except Exception:
-        font_title = font_body = font_small = ImageFont.load_default()
-
+    bg = Image.new("RGB", (width, height), "#151515")
     image_urls = review.get("image_urls") or []
     if image_urls:
         photo_path = download_image(image_urls[0], review["review_id"], 0)
         photo = Image.open(photo_path).convert("RGB")
-        photo.thumbnail((980, 980))
-        px = (width - photo.width) // 2
-        bg.paste(photo, (px, 120))
+        bg = cover_crop(photo, width, height)
+        bg = bg.filter(ImageFilter.GaussianBlur(10))
 
-    y = 1120
-    draw.text((64, y), review.get("restaurant_name", ""), fill="#22110a", font=font_title)
-    y += 96
-    area = review.get("area_category", "")
-    if area:
-        draw.text((64, y), area[:36], fill="#7c2d12", font=font_small)
-        y += 70
-    rating = review.get("rating", "")
-    if rating:
-        draw.text((64, y), f"Tabelog rating: {rating}", fill="#ea580c", font=font_body)
-        y += 72
-    title = review.get("review_title", "")
-    if title:
-        draw.text((64, y), title[:24], fill="#22110a", font=font_body)
+    overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    overlay_draw = ImageDraw.Draw(overlay)
+    overlay_draw.rectangle((0, 0, width, height), fill=(0, 0, 0, 74))
+    overlay_draw.rectangle((0, 0, width, 410), fill=(0, 0, 0, 58))
+    overlay_draw.rectangle((0, 1510, width, height), fill=(0, 0, 0, 132))
 
-    draw.rectangle((64, 1760, 1016, 1810), fill="#ea580c")
-    draw.text((64, 1830), "詳しくは食べログ投稿へ", fill="#7c2d12", font=font_small)
+    if image_urls:
+        photo_path = download_image(image_urls[0], review["review_id"], 0)
+        photo = Image.open(photo_path).convert("RGB")
+        main_photo = cover_crop(photo, 900, 1120)
+        photo_shadow = Image.new("RGBA", (940, 1160), (0, 0, 0, 0))
+        shadow_draw = ImageDraw.Draw(photo_shadow)
+        shadow_draw.rounded_rectangle((20, 20, 920, 1140), radius=46, fill=(0, 0, 0, 95))
+        photo_shadow = photo_shadow.filter(ImageFilter.GaussianBlur(18))
+        overlay.alpha_composite(photo_shadow, (70, 310))
+        mask = Image.new("L", (900, 1120), 0)
+        ImageDraw.Draw(mask).rounded_rectangle((0, 0, 900, 1120), radius=42, fill=255)
+        overlay.paste(main_photo.convert("RGBA"), (90, 330), mask)
+
+    bg = Image.alpha_composite(bg.convert("RGBA"), overlay)
+    draw = ImageDraw.Draw(bg)
+
+    area_text = cover_area(review)
+    restaurant_name = review.get("restaurant_name", "")
+
+    label_font = font(42, bold=True)
+    title_font = font(76, bold=True)
+    small_font = font(34, bold=True)
+
+    area_label = f"{area_text.split('、')[0].strip() or area_text}グルメ"
+    area_box = draw.textbbox((0, 0), area_label, font=label_font)
+    pill_w = min(area_box[2] - area_box[0] + 72, 920)
+    draw.rounded_rectangle((78, 104, 78 + pill_w, 178), radius=37, fill="#ffffff")
+    draw.text((114, 119), area_label, fill="#151515", font=label_font)
+
+    name_lines = wrap_text(draw, restaurant_name, title_font, 950)[:3]
+    line_height = 92
+    y = 1588
+    for line in name_lines:
+        box = draw.textbbox((0, 0), line, font=title_font)
+        draw.text(((width - (box[2] - box[0])) / 2, y), line, fill="#ffffff", font=title_font)
+        y += line_height
+
+    draw.line((160, 1844, 920, 1844), fill="#ffffff", width=4)
+    draw.text((320, 1868), "詳しくはフィード投稿へ", fill="#ffffff", font=small_font)
 
     output = MEDIA_DIR / f"{review['review_id']}_story.jpg"
-    bg.save(output, quality=92)
+    bg.convert("RGB").save(output, quality=94)
     return output
 
 
