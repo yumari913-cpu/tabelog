@@ -371,7 +371,7 @@ def build_hashtags(area_category, genre, hashtags):
 
 
 def validate_caption(caption, max_length=2200):
-    if "..." in caption or "…" in caption:
+    if "..." in caption:
         raise ValueError("Caption contains truncation markers.")
     if len(caption) > max_length:
         raise ValueError(f"Caption is too long for Instagram: {len(caption)} characters.")
