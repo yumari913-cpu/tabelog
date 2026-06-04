@@ -1,4 +1,5 @@
 import html
+import json
 import re
 import time
 from html.parser import HTMLParser
@@ -29,6 +30,14 @@ def clean_text(value):
 def meta_content(source, prop):
     pattern = rf'<meta[^>]+property=["\']{re.escape(prop)}["\'][^>]+content=["\']([^"\']+)["\']'
     match = re.search(pattern, source, re.I)
+    return html.unescape(match.group(1)) if match else ""
+
+
+def canonical_url(source):
+    match = re.search(r'<link[^>]+rel=["\']canonical["\'][^>]+href=["\']([^"\']+)["\']', source, re.I)
+    if match:
+        return html.unescape(match.group(1))
+    match = re.search(r'<link[^>]+href=["\']([^"\']+)["\'][^>]+rel=["\']canonical["\']', source, re.I)
     return html.unescape(match.group(1)) if match else ""
 
 
@@ -95,7 +104,10 @@ def parse_detail(review_url):
     )
     restaurant_name = clean_text(restaurant_match.group(2)) if restaurant_match else meta_content(source, "og:title")
     restaurant_url = html.unescape(restaurant_match.group(1)) if restaurant_match else ""
+    if not restaurant_url:
+        restaurant_url = re.sub(r"/dtlrvwlst/B\d+/?$", "/", canonical_url(source))
     area_category = clean_text(restaurant_match.group(3)) if restaurant_match else ""
+    business_info = fetch_restaurant_business_info(restaurant_url) if restaurant_url else {}
 
     title_match = re.search(r'<p class=["\']rvw-item__title["\'][^>]*>\s*(?:<[^>]+>)*\s*(.*?)\s*</p>', source, re.S)
     if not title_match:
@@ -136,8 +148,20 @@ def parse_detail(review_url):
         "body": body,
         "rating": rating,
         "visited_date": visited_date,
+        "business_hours": business_info.get("business_hours", ""),
+        "regular_holiday": business_info.get("regular_holiday", ""),
         "image_urls": image_urls[:20],
-        "caption": build_caption(restaurant_name, area_category, review_title, body, rating, review_url, []),
+        "caption": build_caption(
+            restaurant_name,
+            area_category,
+            review_title,
+            body,
+            rating,
+            review_url,
+            [],
+            business_hours=business_info.get("business_hours", ""),
+            regular_holiday=business_info.get("regular_holiday", ""),
+        ),
     }
 
 
@@ -151,11 +175,125 @@ def area_hashtags(area_category):
     return tags
 
 
-def compact_summary(text, limit=170):
+def sentence_summary(text, limit=170, max_sentences=None):
     summary = re.sub(r"\s+", " ", text or "").strip()
-    if len(summary) > limit:
-        summary = summary[:limit].rstrip() + "..."
-    return summary
+    if not summary or len(summary) <= limit:
+        return summary
+
+    sentences = re.findall(r".+?[。！？!?](?:」)?|.+$", summary)
+    selected = []
+    total = 0
+    for sentence in sentences:
+        sentence = sentence.strip()
+        if not sentence:
+            continue
+        next_total = total + len(sentence)
+        if selected and next_total > limit:
+            break
+        if max_sentences and len(selected) >= max_sentences:
+            break
+        if not selected and len(sentence) > limit:
+            clauses = re.split(r"(?<=[、,])", sentence)
+            clause_selected = []
+            clause_total = 0
+            for clause in clauses:
+                if clause_selected and clause_total + len(clause) > limit:
+                    break
+                clause_selected.append(clause)
+                clause_total += len(clause)
+            return "".join(clause_selected).rstrip("、,。")
+        selected.append(sentence)
+        total = next_total
+
+    return " ".join(selected).strip()
+
+
+def day_label(days):
+    order = ["月", "火", "水", "木", "金", "土", "日"]
+    positions = [order.index(day) for day in days if day in order]
+    if not positions:
+        return "・".join(days)
+    ranges = []
+    start = prev = positions[0]
+    for pos in positions[1:]:
+        if pos == prev + 1:
+            prev = pos
+            continue
+        ranges.append((start, prev))
+        start = prev = pos
+    ranges.append((start, prev))
+    labels = []
+    for start, end in ranges:
+        labels.append(order[start] if start == end else f"{order[start]}〜{order[end]}")
+    return "・".join(labels)
+
+
+def parse_business_hours_text(text):
+    text = clean_text(text)
+    entries = []
+    for match in re.finditer(r"\[(月|火|水|木|金|土|日)\]\s*([^\[]+)", text):
+        value = re.sub(r"\s+", " ", match.group(2)).strip()
+        value = re.sub(r"お店情報を見る.*$", "", value).strip()
+        if value:
+            entries.append((match.group(1), value))
+
+    if not entries:
+        return {"business_hours": sentence_summary(text, 180), "regular_holiday": ""}
+
+    closed_days = [day for day, value in entries if "定休日" in value]
+    open_entries = [(day, value) for day, value in entries if "定休日" not in value]
+
+    grouped = []
+    seen_values = []
+    for _, value in open_entries:
+        if value not in seen_values:
+            seen_values.append(value)
+    for value in seen_values:
+        days = [day for day, item_value in open_entries if item_value == value]
+        grouped.append(f"{day_label(days)}：{value}")
+
+    regular_holiday = day_label(closed_days) if closed_days else "なし"
+    return {
+        "business_hours": " / ".join(grouped),
+        "regular_holiday": regular_holiday,
+    }
+
+
+def extract_faq_business_info(source):
+    for match in re.finditer(
+        r'<script[^>]+type=["\']application/ld\+json["\'][^>]*>(.*?)</script>',
+        source,
+        re.S | re.I,
+    ):
+        raw = html.unescape(match.group(1)).strip()
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        entities = data.get("mainEntity", []) if isinstance(data, dict) else []
+        for entity in entities:
+            if not isinstance(entity, dict) or "営業時間" not in entity.get("name", ""):
+                continue
+            answer = entity.get("acceptedAnswer", {})
+            text = answer.get("text", "") if isinstance(answer, dict) else ""
+            if text:
+                return parse_business_hours_text(text)
+    return {}
+
+
+def extract_table_business_info(source):
+    match = re.search(r"<th>\s*営業時間\s*</th>\s*<td[^>]*>(.*?)</td>", source, re.S)
+    if match:
+        return parse_business_hours_text(match.group(1))
+    return {}
+
+
+def fetch_restaurant_business_info(restaurant_url):
+    try:
+        source = fetch(restaurant_url)
+    except Exception:
+        return {}
+    return extract_faq_business_info(source) or extract_table_business_info(source)
 
 
 def first_area(area_category):
@@ -232,13 +370,31 @@ def build_hashtags(area_category, genre, hashtags):
     return tags[:20]
 
 
-def build_caption(restaurant_name, area_category, review_title, body, rating, review_url, hashtags, style="story"):
+def validate_caption(caption, max_length=2200):
+    if "..." in caption or "…" in caption:
+        raise ValueError("Caption contains truncation markers.")
+    if len(caption) > max_length:
+        raise ValueError(f"Caption is too long for Instagram: {len(caption)} characters.")
+
+
+def build_caption(
+    restaurant_name,
+    area_category,
+    review_title,
+    body,
+    rating,
+    review_url,
+    hashtags,
+    style="story",
+    business_hours="",
+    regular_holiday="",
+):
     area = area_category.split("/")[0].replace("（", "").replace("）", "").strip()
     lead_area = first_area(area_category)
     genre = caption_genre(area_category, " ".join([restaurant_name, review_title, body]))
     title_source = review_title or f"{restaurant_name}で楽しむ{genre}"
-    title = compact_summary(title_source, 34)
-    report = compact_summary(body or review_title, 230)
+    title = sentence_summary(title_source, 34, max_sentences=1)
+    report = sentence_summary(body or review_title, 520, max_sentences=6)
 
     if lead_area and genre:
         catch = f"【{lead_area}×{genre}】保存して行きたい、{title}"
@@ -250,7 +406,7 @@ def build_caption(restaurant_name, area_category, review_title, body, rating, re
     intro_area = lead_area or "このエリア"
     parts = [
         f"{catch} 🍽️",
-        f"【導入】\nここ知らなきゃ損。{intro_area}で次のごはん候補に入れたい一軒です。",
+        f"ここ知らなきゃ損。{intro_area}で次のごはん候補に入れたい一軒です。",
     ]
 
     if report:
@@ -276,8 +432,8 @@ def build_caption(restaurant_name, area_category, review_title, body, rating, re
                 "【店舗情報】",
                 f"・店舗名：{restaurant_name or '（※要確認）'}",
                 f"・アクセス：{area or '（※要確認）'}",
-                "・営業時間：（※要確認）",
-                "・定休日：（※要確認）",
+                f"・営業時間：{business_hours or '（※要確認）'}",
+                f"・定休日：{regular_holiday or '（※要確認）'}",
                 "・客層・混雑状況：（※要確認）",
                 f"・食べログ詳細：{review_url}",
             ]
@@ -287,7 +443,9 @@ def build_caption(restaurant_name, area_category, review_title, body, rating, re
     tag_line = " ".join(build_hashtags(area_category, genre, hashtags))
     if tag_line:
         parts.append("【ハッシュタグ】\n" + tag_line)
-    return "\n\n".join(parts)
+    caption = "\n\n".join(parts)
+    validate_caption(caption)
+    return caption
 
 
 def scrape_reviews(reviewer_url, max_pages=10, limit=None):
