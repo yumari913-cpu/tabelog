@@ -424,7 +424,7 @@ def build_caption(
     ]
     parts.append("\n".join(scene_lines))
 
-    parts.append("【保存の促し】\n後で見返せるように【保存】がおすすめです。次のお店選びに使ってください。")
+    parts.append("後で見返せるように【保存】がおすすめです。次のお店選びに使ってください。")
 
     parts.append(
         "\n".join(
