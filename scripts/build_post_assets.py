@@ -8,7 +8,12 @@ from urllib.parse import urlparse
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from tabelog_insta.config import load_config
-from tabelog_insta.media import generate_feed_cover_image, prepare_feed_photo, select_best_image_urls
+from tabelog_insta.media import (
+    generate_feed_cover_image,
+    generate_story_image,
+    prepare_feed_photo,
+    select_best_image_urls,
+)
 from tabelog_insta.scraper import build_caption, parse_detail
 
 
@@ -57,6 +62,10 @@ def main():
     public_cover = output_dir / f"{review['review_id']}_feed_cover.jpg"
     shutil.copyfile(cover_path, public_cover)
 
+    story_path = generate_story_image(review)
+    public_story = output_dir / f"{review['review_id']}_story.jpg"
+    shutil.copyfile(story_path, public_story)
+
     caption_path = output_dir / f"{review['review_id']}_caption.txt"
     caption_path.write_text(review["caption"], encoding="utf-8")
 
@@ -73,6 +82,7 @@ def main():
         "restaurant_name": review.get("restaurant_name", ""),
         "caption": review["caption"],
         "cover_path": str(public_cover),
+        "story_path": str(public_story),
         "image_paths": prepared_image_paths,
         "image_urls": review.get("image_urls", [])[:6],
     }
@@ -82,6 +92,7 @@ def main():
     print(f"review_id={review['review_id']}")
     print(f"manifest={manifest_path}")
     print(f"cover={public_cover}")
+    print(f"story={public_story}")
 
 
 if __name__ == "__main__":
