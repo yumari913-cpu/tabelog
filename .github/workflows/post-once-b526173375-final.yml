@@ -77,3 +77,5 @@ jobs:
           python scripts/publish_generated_post.py \
             --manifest "${{ steps.build.outputs.manifest }}" \
             --raw-base-url "${RAW_BASE}"
+
+# rerun after story validation QA fix
