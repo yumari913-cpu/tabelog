@@ -88,6 +88,30 @@ def validate_cover_text_block_position(image):
         )
 
 
+def validate_story_text_block_position(image):
+    pixels = image.load()
+    width, height = image.size
+    ys = []
+
+    for y in range(int(height * 0.34), int(height * 0.72)):
+        for x in range(int(width * 0.06), int(width * 0.94)):
+            r, g, b = pixels[x, y]
+            if r > 225 and g > 215 and b > 190:
+                ys.append(y)
+
+    if not ys:
+        raise ValueError("story image text card was not detected.")
+
+    top = min(ys)
+    bottom = max(ys)
+    center = (top + bottom) / 2
+    if top < 620 or bottom > 1280 or center < 870 or center > 1080:
+        raise ValueError(
+            "story image text card is not centered in the safe area "
+            f"(top={top}, bottom={bottom}, center={center:.1f})."
+        )
+
+
 def validate_cover(path):
     validate_image_exists(path, "cover image")
     image, stat = load_image(path)
@@ -106,6 +130,7 @@ def validate_story(path):
     if image.size != (1080, 1920):
         raise ValueError(f"story image must be 1080x1920, got {image.size}: {path}")
     validate_not_blank(image, stat, "story image")
+    validate_story_text_block_position(image)
 
 
 def validate_feed_photo(path):
