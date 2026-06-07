@@ -74,7 +74,14 @@ def load_review_url_rows(config):
 
 
 def load_posted_rows(config):
-    return _read_csv(config, POSTED_URLS_BLOB, "posted_review_urls.csv")
+    rows = _read_csv(config, POSTED_URLS_BLOB, "posted_review_urls.csv")
+    if rows:
+        return rows
+
+    local_path = ROOT / "posted_review_urls.csv"
+    if not local_path.exists():
+        return rows
+    return _read_csv_text(local_path.read_text(encoding="utf-8-sig"))
 
 
 def save_review_url_rows(config, rows):
