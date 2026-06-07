@@ -1,11 +1,6 @@
 name: Daily Instagram Post
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - .github/workflows/daily-instagram-post.yml
   schedule:
     - cron: "0 11 * * *"
   workflow_dispatch:
