@@ -6,6 +6,7 @@ from tabelog_insta.instagram import InstagramClient, public_url_for
 from tabelog_insta.media import export_instagram_package, generate_feed_cover_image, generate_reel_video, generate_story_image, upload_media
 from tabelog_insta.scraper import build_caption, scrape_reviews
 from tabelog_insta.storage import get_review, load_reviews, mark_posted, update_review, upsert_reviews
+from tabelog_insta.threads import ThreadsClient, engage_with_replies, ensure_daily_plan, publish_due_post
 
 
 def enrich_caption(review, config):
@@ -98,6 +99,52 @@ def cmd_publish(args):
     publish_review(review, args.targets.split(","), config)
 
 
+def cmd_threads_plan(args):
+    config = load_config()
+    created, planned = ensure_daily_plan(config, args.date)
+    print(f"Threads投稿計画: 作成 {len(created)}件 / 当日合計 {len(planned)}件")
+    for post in planned:
+        print(f"[{post['slot_index'] + 1:02d}] {post['scheduled_hour']:02d}:00 {post['restaurant_name']}")
+        print(post["text"])
+        print()
+
+
+def cmd_threads_tick(args):
+    config = load_config()
+    if not args.dry_run and not config.get("threads", {}).get("auto_publish", False):
+        raise SystemExit("THREADS_AUTO_PUBLISH=true または config.json の threads.auto_publish=true が必要です。")
+    if not args.dry_run and not ThreadsClient(config).ready:
+        raise SystemExit("THREADS_USER_ID と THREADS_ACCESS_TOKEN が必要です。")
+    post = publish_due_post(config, dry_run=args.dry_run)
+    if not post:
+        print("Threads投稿枠はまだありません。")
+        return
+    if args.dry_run:
+        print("DRY RUN: 次に投稿される予定の本文です。")
+        print(post["text"])
+    else:
+        print(f"Threads投稿完了: {post.get('threads_post_id') or post.get('threads_response')}")
+
+
+def cmd_threads_me(args):
+    config = load_config()
+    client = ThreadsClient(config)
+    print(client.me())
+
+
+def cmd_threads_engage(args):
+    config = load_config()
+    if not args.dry_run and not config.get("threads", {}).get("auto_reply", False):
+        raise SystemExit("THREADS_AUTO_REPLY=true または config.json の threads.auto_reply=true が必要です。")
+    if not args.dry_run and not ThreadsClient(config).ready:
+        raise SystemExit("THREADS_USER_ID と THREADS_ACCESS_TOKEN が必要です。")
+    handled = engage_with_replies(config, limit=args.limit, dry_run=args.dry_run)
+    print(f"Threads返信処理: {len(handled)}件")
+    if args.dry_run:
+        for item in handled:
+            print(f"{item['reply_id']}: {item['text']}")
+
+
 def publish_new_reviews_if_enabled(reviews, config):
     targets = [name for name, enabled in config.get("auto_publish", {}).items() if enabled]
     if not targets:
@@ -179,6 +226,22 @@ def main(argv=None):
     publish.add_argument("review_id")
     publish.add_argument("--targets", default="feed")
     publish.set_defaults(func=cmd_publish)
+
+    threads_plan = sub.add_parser("threads-plan")
+    threads_plan.add_argument("--date")
+    threads_plan.set_defaults(func=cmd_threads_plan)
+
+    threads_tick = sub.add_parser("threads-tick")
+    threads_tick.add_argument("--dry-run", action="store_true")
+    threads_tick.set_defaults(func=cmd_threads_tick)
+
+    threads_me = sub.add_parser("threads-me")
+    threads_me.set_defaults(func=cmd_threads_me)
+
+    threads_engage = sub.add_parser("threads-engage")
+    threads_engage.add_argument("--limit", type=int, default=3)
+    threads_engage.add_argument("--dry-run", action="store_true")
+    threads_engage.set_defaults(func=cmd_threads_engage)
 
     args = parser.parse_args(argv)
     args.func(args)
