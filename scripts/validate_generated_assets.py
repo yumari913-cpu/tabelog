@@ -81,7 +81,7 @@ def validate_cover_text_block_position(image):
     top = min(ys)
     bottom = max(ys)
     center = (top + bottom) / 2
-    if top > 980 or bottom > 1540 or center > 1240:
+    if top > 720 or bottom > 1220 or center > 980:
         raise ValueError(
             "cover image text card is too low for Instagram grid preview "
             f"(top={top}, bottom={bottom}, center={center:.1f})."
@@ -91,8 +91,8 @@ def validate_cover_text_block_position(image):
 def validate_cover(path):
     validate_image_exists(path, "cover image")
     image, stat = load_image(path)
-    if image.size != (1080, 1920):
-        raise ValueError(f"cover image must be 1080x1920, got {image.size}: {path}")
+    if image.size != (1080, 1350):
+        raise ValueError(f"cover image must be 1080x1350, got {image.size}: {path}")
     validate_not_blank(image, stat, "cover image")
     legacy_line_y = detect_legacy_horizontal_line(image)
     if legacy_line_y is not None:
