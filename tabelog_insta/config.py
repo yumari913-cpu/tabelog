@@ -42,6 +42,21 @@ def apply_env(config):
     instagram["ig_user_id"] = os.getenv("IG_USER_ID", instagram.get("ig_user_id", ""))
     instagram["access_token"] = os.getenv("IG_ACCESS_TOKEN", instagram.get("access_token", ""))
 
+    threads = config.setdefault("threads", {})
+    threads["graph_base_url"] = os.getenv(
+        "THREADS_GRAPH_BASE_URL",
+        threads.get("graph_base_url", "https://graph.threads.net/v1.0"),
+    )
+    threads["user_id"] = os.getenv("THREADS_USER_ID", threads.get("user_id", ""))
+    threads["access_token"] = os.getenv("THREADS_ACCESS_TOKEN", threads.get("access_token", ""))
+    threads["instagram_profile_url"] = os.getenv(
+        "THREADS_INSTAGRAM_PROFILE_URL",
+        threads.get("instagram_profile_url", "https://www.instagram.com/mogmogtro112233/"),
+    )
+    threads["posts_per_day"] = int(os.getenv("THREADS_POSTS_PER_DAY", threads.get("posts_per_day", 10)))
+    threads["auto_publish"] = env_bool("THREADS_AUTO_PUBLISH", threads.get("auto_publish", False))
+    threads["auto_reply"] = env_bool("THREADS_AUTO_REPLY", threads.get("auto_reply", False))
+
     auto_publish = config.setdefault("auto_publish", {})
     auto_publish["feed"] = env_bool("AUTO_PUBLISH_FEED", auto_publish.get("feed", False))
     auto_publish["reel"] = env_bool("AUTO_PUBLISH_REEL", auto_publish.get("reel", False))
