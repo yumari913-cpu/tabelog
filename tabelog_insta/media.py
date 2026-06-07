@@ -231,7 +231,9 @@ def generate_feed_cover_image(review):
     pill_w = min(area_box[2] - area_box[0] + 70, 860)
     pill = (88, 870, 88 + pill_w, 948)
     draw.rounded_rectangle(pill, radius=39, fill="#111111")
-    draw.text((123, 886), area_label, fill="#ffffff", font=area_font)
+    label_x = pill[0] + (pill[2] - pill[0] - (area_box[2] - area_box[0])) / 2 - area_box[0]
+    label_y = pill[1] + (pill[3] - pill[1] - (area_box[3] - area_box[1])) / 2 - area_box[1]
+    draw.text((label_x, label_y), area_label, fill="#ffffff", font=area_font)
 
     name_font, name_lines, total_height, line_gap = fit_text_lines(
         draw,
