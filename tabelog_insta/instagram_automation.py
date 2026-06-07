@@ -17,7 +17,7 @@ from .scraper import build_caption, list_review_urls, parse_detail
 
 
 REVIEW_URL_FIELDS = ["No.", "店名", "訪問日", "レビューURL"]
-POSTED_FIELDS = ["投稿日時UTC", "店名", "レビューURL", "Instagram結果"]
+POSTED_FIELDS = ["投稿日時UTC", "店名", "レビューURL", "GitHub Run", "Instagram結果"]
 REVIEW_URLS_BLOB = "data/review_urls.csv"
 POSTED_URLS_BLOB = "data/posted_review_urls.csv"
 
@@ -178,6 +178,7 @@ def mark_review_posted(config, review_row, result):
             "投稿日時UTC": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
             "店名": review_row.get("店名", ""),
             "レビューURL": review_url,
+            "GitHub Run": "",
             "Instagram結果": json.dumps(result, ensure_ascii=False),
         }
     )
