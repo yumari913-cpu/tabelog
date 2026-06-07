@@ -218,8 +218,8 @@ def generate_feed_cover_image(review):
     overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     overlay_draw = ImageDraw.Draw(overlay)
     overlay_draw.rectangle((0, 0, width, 620), fill=(0, 0, 0, 54))
-    overlay_draw.rectangle((0, 1280, width, height), fill=(0, 0, 0, 84))
-    card = (52, 1210, 1028, 1798)
+    overlay_draw.rectangle((0, 900, width, 1580), fill=(0, 0, 0, 84))
+    card = (52, 920, 1028, 1498)
     overlay_draw.rounded_rectangle(card, radius=46, fill=(255, 252, 245, 246))
     bg = Image.alpha_composite(bg.convert("RGBA"), overlay)
     draw = ImageDraw.Draw(bg)
@@ -229,9 +229,9 @@ def generate_feed_cover_image(review):
     area_label = f"{area_label}グルメ"
     area_box = draw.textbbox((0, 0), area_label, font=area_font)
     pill_w = min(area_box[2] - area_box[0] + 70, 860)
-    pill = (88, 1160, 88 + pill_w, 1238)
+    pill = (88, 870, 88 + pill_w, 948)
     draw.rounded_rectangle(pill, radius=39, fill="#111111")
-    draw.text((123, 1176), area_label, fill="#ffffff", font=area_font)
+    draw.text((123, 886), area_label, fill="#ffffff", font=area_font)
 
     name_font, name_lines, total_height, line_gap = fit_text_lines(
         draw,
