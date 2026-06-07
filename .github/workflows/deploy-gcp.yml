@@ -36,5 +36,9 @@ jobs:
           AUTO_PUBLISH_FEED: ${{ vars.AUTO_PUBLISH_FEED }}
           AUTO_PUBLISH_STORY: ${{ vars.AUTO_PUBLISH_STORY }}
           AUTO_PUBLISH_REEL: ${{ vars.AUTO_PUBLISH_REEL }}
+          THREADS_AUTO_PUBLISH: ${{ vars.THREADS_AUTO_PUBLISH }}
+          THREADS_AUTO_REPLY: ${{ vars.THREADS_AUTO_REPLY }}
+          THREADS_POSTS_PER_DAY: ${{ vars.THREADS_POSTS_PER_DAY }}
+          THREADS_INSTAGRAM_PROFILE_URL: https://www.instagram.com/mogmogtro112233/
           SYNC_TOKEN_VALUE: ${{ secrets.SYNC_TOKEN_VALUE }}
         run: bash deploy/gcp_setup.sh
