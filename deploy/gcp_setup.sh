@@ -58,41 +58,15 @@ gcloud scheduler jobs delete "${SERVICE}-sync" \
   --quiet >/dev/null 2>&1 || true
 
 if gcloud scheduler jobs describe "${SERVICE}-instagram-sync-review-urls" --location "${REGION}" >/dev/null 2>&1; then
-  gcloud scheduler jobs update http "${SERVICE}-instagram-sync-review-urls" \
+  gcloud scheduler jobs delete "${SERVICE}-instagram-sync-review-urls" \
     --location "${REGION}" \
-    --schedule "0 10 * * 1" \
-    --time-zone "Asia/Tokyo" \
-    --uri "${SERVICE_URL}/instagram/sync-review-urls" \
-    --http-method POST \
-    --update-headers "X-Sync-Token=${SYNC_TOKEN_VALUE:-CHANGE_ME_IN_CONSOLE}"
-else
-  gcloud scheduler jobs create http "${SERVICE}-instagram-sync-review-urls" \
-    --location "${REGION}" \
-    --schedule "0 10 * * 1" \
-    --time-zone "Asia/Tokyo" \
-    --uri "${SERVICE_URL}/instagram/sync-review-urls" \
-    --http-method POST \
-    --headers "X-Sync-Token=${SYNC_TOKEN_VALUE:-CHANGE_ME_IN_CONSOLE}"
+    --quiet
 fi
 
 if gcloud scheduler jobs describe "${SERVICE}-instagram-post-next" --location "${REGION}" >/dev/null 2>&1; then
-  gcloud scheduler jobs update http "${SERVICE}-instagram-post-next" \
+  gcloud scheduler jobs delete "${SERVICE}-instagram-post-next" \
     --location "${REGION}" \
-    --schedule "0 20 * * *" \
-    --time-zone "Asia/Tokyo" \
-    --uri "${SERVICE_URL}/instagram/post-next" \
-    --http-method POST \
-    --attempt-deadline "30m" \
-    --update-headers "X-Sync-Token=${SYNC_TOKEN_VALUE:-CHANGE_ME_IN_CONSOLE}"
-else
-  gcloud scheduler jobs create http "${SERVICE}-instagram-post-next" \
-    --location "${REGION}" \
-    --schedule "0 20 * * *" \
-    --time-zone "Asia/Tokyo" \
-    --uri "${SERVICE_URL}/instagram/post-next" \
-    --http-method POST \
-    --attempt-deadline "30m" \
-    --headers "X-Sync-Token=${SYNC_TOKEN_VALUE:-CHANGE_ME_IN_CONSOLE}"
+    --quiet
 fi
 
 
