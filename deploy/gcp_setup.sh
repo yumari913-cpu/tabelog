@@ -44,7 +44,7 @@ gcloud run deploy "${SERVICE}" \
   --cpu 1 \
   --memory 512Mi \
   --concurrency 80 \
-  --set-env-vars "TABELOG_REVIEWER_URL=${REVIEWER_URL},STORAGE_BUCKET=${BUCKET},PUBLIC_BASE_URL=https://storage.googleapis.com/${BUCKET},AUTO_PUBLISH_FEED=${AUTO_PUBLISH_FEED:-false},AUTO_PUBLISH_STORY=${AUTO_PUBLISH_STORY:-false},AUTO_PUBLISH_REEL=${AUTO_PUBLISH_REEL:-false},THREADS_AUTO_PUBLISH=${THREADS_AUTO_PUBLISH:-false},THREADS_AUTO_REPLY=${THREADS_AUTO_REPLY:-false},THREADS_POSTS_PER_DAY=${THREADS_POSTS_PER_DAY:-10},THREADS_INSTAGRAM_PROFILE_URL=${THREADS_INSTAGRAM_PROFILE_URL:-https://www.instagram.com/mogmogtro112233/}" \
+  --set-env-vars "TABELOG_REVIEWER_URL=${REVIEWER_URL},STORAGE_BUCKET=${BUCKET},PUBLIC_BASE_URL=https://storage.googleapis.com/${BUCKET},AUTO_PUBLISH_FEED=false,AUTO_PUBLISH_STORY=false,AUTO_PUBLISH_REEL=false,INSTAGRAM_POST_STORY=${INSTAGRAM_POST_STORY:-true},THREADS_AUTO_PUBLISH=${THREADS_AUTO_PUBLISH:-false},THREADS_AUTO_REPLY=${THREADS_AUTO_REPLY:-false},THREADS_POSTS_PER_DAY=${THREADS_POSTS_PER_DAY:-10},THREADS_INSTAGRAM_PROFILE_URL=${THREADS_INSTAGRAM_PROFILE_URL:-https://www.instagram.com/mogmogtro112233/}" \
   --set-secrets "IG_USER_ID=ig-user-id:latest,IG_ACCESS_TOKEN=ig-access-token:latest,SYNC_TOKEN=sync-token:latest,THREADS_USER_ID=threads-user-id:latest,THREADS_ACCESS_TOKEN=threads-access-token:latest"
 
 SERVICE_URL="$(gcloud run services describe "${SERVICE}" --region "${REGION}" --format='value(status.url)')"
@@ -64,6 +64,44 @@ else
     --time-zone "Asia/Tokyo" \
     --uri "${SERVICE_URL}/sync" \
     --http-method POST \
+    --headers "X-Sync-Token=${SYNC_TOKEN_VALUE:-CHANGE_ME_IN_CONSOLE}"
+fi
+
+if gcloud scheduler jobs describe "${SERVICE}-instagram-sync-review-urls" --location "${REGION}" >/dev/null 2>&1; then
+  gcloud scheduler jobs update http "${SERVICE}-instagram-sync-review-urls" \
+    --location "${REGION}" \
+    --schedule "0 10 * * 1" \
+    --time-zone "Asia/Tokyo" \
+    --uri "${SERVICE_URL}/instagram/sync-review-urls" \
+    --http-method POST \
+    --update-headers "X-Sync-Token=${SYNC_TOKEN_VALUE:-CHANGE_ME_IN_CONSOLE}"
+else
+  gcloud scheduler jobs create http "${SERVICE}-instagram-sync-review-urls" \
+    --location "${REGION}" \
+    --schedule "0 10 * * 1" \
+    --time-zone "Asia/Tokyo" \
+    --uri "${SERVICE_URL}/instagram/sync-review-urls" \
+    --http-method POST \
+    --headers "X-Sync-Token=${SYNC_TOKEN_VALUE:-CHANGE_ME_IN_CONSOLE}"
+fi
+
+if gcloud scheduler jobs describe "${SERVICE}-instagram-post-next" --location "${REGION}" >/dev/null 2>&1; then
+  gcloud scheduler jobs update http "${SERVICE}-instagram-post-next" \
+    --location "${REGION}" \
+    --schedule "0 20 * * *" \
+    --time-zone "Asia/Tokyo" \
+    --uri "${SERVICE_URL}/instagram/post-next" \
+    --http-method POST \
+    --attempt-deadline "30m" \
+    --update-headers "X-Sync-Token=${SYNC_TOKEN_VALUE:-CHANGE_ME_IN_CONSOLE}"
+else
+  gcloud scheduler jobs create http "${SERVICE}-instagram-post-next" \
+    --location "${REGION}" \
+    --schedule "0 20 * * *" \
+    --time-zone "Asia/Tokyo" \
+    --uri "${SERVICE_URL}/instagram/post-next" \
+    --http-method POST \
+    --attempt-deadline "30m" \
     --headers "X-Sync-Token=${SYNC_TOKEN_VALUE:-CHANGE_ME_IN_CONSOLE}"
 fi
 
