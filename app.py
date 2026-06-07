@@ -3,7 +3,7 @@ import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
-from cli import cmd_sync
+from cli import cmd_sync, cmd_threads_engage, cmd_threads_tick
 from tabelog_insta.config import load_config
 from tabelog_insta.media import export_instagram_package, generate_feed_cover_image, generate_story_image
 from tabelog_insta.storage import get_review, load_reviews, update_review
@@ -97,7 +97,6 @@ def review_page(review_id):
         <button class="btn secondary" name="make_package" value="1" type="submit">投稿パッケージを作成</button>
       </p>
     </form>
-    <p class="meta">リール動画はCLIの `python3 cli.py reel {esc(review_id)}` で作成します。ffmpegが必要です。</p>
     """
     return layout(review.get("restaurant_name", "レビュー"), body)
 
@@ -105,16 +104,17 @@ def review_page(review_id):
 def howto_page():
     config = load_config()
     ready = bool(config.get("instagram", {}).get("ig_user_id") and config.get("instagram", {}).get("access_token"))
+    threads_ready = bool(config.get("threads", {}).get("user_id") and config.get("threads", {}).get("access_token"))
     body = f"""
     <p><a href="/">一覧へ戻る</a></p>
     <h2>運用手順</h2>
     <ol>
-      <li>過去投稿は `python3 cli.py backfill` で取り込みます。</li>
-      <li>新規投稿確認は `python3 cli.py sync` で実行します。</li>
-      <li>この画面でキャプションを確認・編集します。</li>
-      <li>Instagram認証情報と公開URLが整ったら `python3 cli.py publish REVIEW_ID --targets feed` で投稿します。</li>
+      <li>新規投稿確認は Cloud Scheduler の /sync で実行します。</li>
+      <li>Threads投稿は /threads/tick で、JSTの投稿枠に到達していれば1本投稿します。</li>
+      <li>Threads返信は /threads/engage で、自投稿への返信だけを処理します。</li>
     </ol>
     <p>Instagram認証情報: {'設定済み' if ready else '未設定'}</p>
+    <p>Threads認証情報: {'設定済み' if threads_ready else '未設定'}</p>
     """
     return layout("運用手順", body)
 
@@ -139,6 +139,12 @@ class Handler(BaseHTTPRequestHandler):
         if parsed.path != "/save":
             if parsed.path == "/sync":
                 self.handle_sync()
+                return
+            if parsed.path == "/threads/tick":
+                self.handle_threads_tick()
+                return
+            if parsed.path == "/threads/engage":
+                self.handle_threads_engage()
                 return
             self.send_error(404)
             return
@@ -188,6 +194,35 @@ class Handler(BaseHTTPRequestHandler):
 
         cmd_sync(Args())
         self.respond("synced", content_type="text/plain; charset=utf-8")
+
+    def handle_threads_tick(self):
+        config = load_config()
+        expected = config.get("sync_token")
+        provided = self.headers.get("X-Sync-Token") or parse_qs(urlparse(self.path).query).get("token", [""])[0]
+        if not expected or provided != expected:
+            self.send_error(403)
+            return
+
+        class Args:
+            dry_run = False
+
+        cmd_threads_tick(Args())
+        self.respond("threads ticked", content_type="text/plain; charset=utf-8")
+
+    def handle_threads_engage(self):
+        config = load_config()
+        expected = config.get("sync_token")
+        provided = self.headers.get("X-Sync-Token") or parse_qs(urlparse(self.path).query).get("token", [""])[0]
+        if not expected or provided != expected:
+            self.send_error(403)
+            return
+
+        class Args:
+            dry_run = False
+            limit = 3
+
+        cmd_threads_engage(Args())
+        self.respond("threads engaged", content_type="text/plain; charset=utf-8")
 
 
 def main():
