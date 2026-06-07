@@ -38,17 +38,54 @@ def detect_legacy_horizontal_line(image):
     y_start = int(height * 0.64)
     y_end = int(height * 0.90)
 
-    for y in range(y_start, y_end):
+    def darkest_run_at(y):
         run = 0
+        longest = 0
         for x in range(int(width * 0.10), int(width * 0.90)):
             r, g, b = pixels[x, y]
             if r < 35 and g < 35 and b < 35:
                 run += 1
-                if run >= min_run:
-                    return y
+                longest = max(longest, run)
             else:
                 run = 0
+        return longest
+
+    for y in range(y_start, y_end):
+        if darkest_run_at(y) < min_run:
+            continue
+        nearby_runs = [
+            darkest_run_at(max(0, y - 12)),
+            darkest_run_at(min(height - 1, y + 12)),
+        ]
+        if max(nearby_runs) < int(width * 0.25):
+            return y
     return None
+
+
+def validate_cover_text_block_position(image):
+    pixels = image.load()
+    width, height = image.size
+    xs = []
+    ys = []
+
+    for y in range(int(height * 0.40), int(height * 0.84)):
+        for x in range(int(width * 0.04), int(width * 0.96)):
+            r, g, b = pixels[x, y]
+            if r > 225 and g > 215 and b > 190:
+                xs.append(x)
+                ys.append(y)
+
+    if not ys:
+        raise ValueError("cover image text card was not detected.")
+
+    top = min(ys)
+    bottom = max(ys)
+    center = (top + bottom) / 2
+    if top > 980 or bottom > 1540 or center > 1240:
+        raise ValueError(
+            "cover image text card is too low for Instagram grid preview "
+            f"(top={top}, bottom={bottom}, center={center:.1f})."
+        )
 
 
 def validate_cover(path):
@@ -60,6 +97,7 @@ def validate_cover(path):
     legacy_line_y = detect_legacy_horizontal_line(image)
     if legacy_line_y is not None:
         raise ValueError(f"cover image has a long horizontal line near y={legacy_line_y}: {path}")
+    validate_cover_text_block_position(image)
 
 
 def validate_story(path):
