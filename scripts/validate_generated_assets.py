@@ -94,10 +94,13 @@ def validate_story_text_block_position(image):
     ys = []
 
     for y in range(int(height * 0.34), int(height * 0.72)):
+        bright_pixels = 0
         for x in range(int(width * 0.06), int(width * 0.94)):
             r, g, b = pixels[x, y]
             if r > 225 and g > 215 and b > 190:
-                ys.append(y)
+                bright_pixels += 1
+        if bright_pixels > int(width * 0.55):
+            ys.append(y)
 
     if not ys:
         raise ValueError("story image text card was not detected.")
