@@ -1,8 +1,6 @@
 name: Sync Tabelog Review URLs
 
 on:
-  schedule:
-    - cron: "0 10 * * 1"
   workflow_dispatch:
 
 jobs:
