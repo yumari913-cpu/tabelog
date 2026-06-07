@@ -12,7 +12,9 @@ from .storage import gcs_bucket, load_reviews, now_iso
 
 THREADS_DB_PATH = DATA_DIR / "threads_posts.json"
 THREADS_DB_BLOB_NAME = "data/threads_posts.json"
-DEFAULT_SCHEDULE_HOURS = [8, 10, 11, 12, 14, 16, 18, 19, 20, 22]
+DEFAULT_SCHEDULE_HOURS = [7, 8, 10, 12, 13, 15, 18, 19, 20, 22]
+DEFAULT_SCHEDULE_MINUTES = [2, 7, 13, 18, 24, 31, 37, 43, 49, 55]
+POST_STYLE_VERSION = "salaryman-shimbashi-v1"
 JST = ZoneInfo("Asia/Tokyo")
 
 
@@ -131,6 +133,7 @@ def review_seed(review):
         "area": area_name(review) or "東京",
         "title": compact(review.get("review_title"), 80),
         "rating": review.get("rating", ""),
+        "instagram_url": review.get("instagram_url") or review.get("instagram_post_url") or "",
     }
 
 
@@ -139,18 +142,18 @@ def build_post_text(template_index, seed, profile_url):
     area = seed["area"]
     title = seed["title"]
     rating = seed["rating"]
-    profile = profile_url.rstrip("/")
+    instagram_url = (seed.get("instagram_url") or profile_url).rstrip("/")
     templates = [
-        f"{area}でお店探し中なら「{restaurant}」をメモ。\n{title}\n\n詳しい写真と感想はInstagramにまとめています。\n{profile}",
-        f"今日の保存候補。\n\n店名: {restaurant}\nエリア: {area}\n食べログ評価: {rating or '-'}\n\n次の外食で迷った時に見返せるよう、Instagram側に写真つきで残しています。\n{profile}",
-        f"外さないお店探しのコツは、料理だけでなく「誰と・何時に・どんな気分で行くか」まで決めて探すこと。\n\n{area}なら、まずは{restaurant}みたいな候補を保存しておくと便利です。",
-        f"{area}グルメメモ。\n{restaurant}は「{title}」という印象でした。\n\n行ったことある方、推しメニューがあれば教えてください。",
-        f"食べログを見る時は、点数だけでなく直近口コミと写真の新しさも見る派です。\n\n今回の候補: {restaurant}\nエリア: {area}\n\n写真はInstagramに載せています。\n{profile}",
-        f"週末のごはん候補を探すなら、先にエリアを絞るのがおすすめ。\n\n今日は{area}の{restaurant}をピックアップ。\n{title}",
-        f"「あとで行きたい店」は、見つけた瞬間に保存しておくのが一番強いです。\n\n今日の保存候補は{restaurant}。\n{area}でごはんを探す時にぜひ。",
-        f"{area}で飲み・ごはんの候補を増やしたい人へ。\n\n{restaurant}の写真と感想をInstagramにまとめました。\n気になるお店探しに使ってください。\n{profile}",
-        f"お店選びで見ているポイント。\n1. 駅からの行きやすさ\n2. 写真の雰囲気\n3. 直近口コミ\n4. 誰と行くか\n\n今回のメモは{area}の{restaurant}です。",
-        f"今日のグルメメモ: {restaurant}\n\n{title}\n\n東京近辺の外食記録をInstagramに蓄積中です。\n{profile}",
+        f"新橋勤務の昼メシ候補メモ。\n{area}で「今日は外したくない」時に、{restaurant}は覚えておきたい店。\n\n{title}\n\n写真付きの実食メモはこちら。\n{instagram_url}",
+        f"サラリーマンの店選び、結局大事なのは「駅から近い・うまい・財布が痛すぎない」だと思ってます。\n\n今日の候補: {restaurant}\nエリア: {area}\n食べログ評価: {rating or '-'}\n\n実際の写真はこのメモにまとめています。\n{instagram_url}",
+        f"新橋で働いていると、昼も夜も店選びの失敗が地味に効く。\n\n{area}なら、まず{restaurant}を候補に入れておくと安心。\n会食というより、ちゃんと腹を満たしたい日のメモです。",
+        f"{area}グルメメモ。\n{restaurant}は「{title}」という印象。\n\n仕事終わりに寄るならこういう店の選択肢を何個か持っておきたい。",
+        f"食べログを見る時、点数だけで決めるとたまに外すので、直近写真と口コミの熱量も見る派です。\n\n今回見てきた店: {restaurant}\nエリア: {area}\n\n写真付きメモはこちら。\n{instagram_url}",
+        f"午後の仕事を乗り切るには、昼メシ選びがかなり大事。\n\n今日は{area}の{restaurant}をメモ。\n{title}\n\n新橋・上野あたりで働く人の店選びに使えるはず。",
+        f"「あとで行く店」は、見つけた瞬間に保存しないとだいたい忘れます。\n\n今日の保存候補は{restaurant}。\n{area}で飲み・ごはんを探す時の引き出しにどうぞ。",
+        f"新橋勤務目線の都内グルメメモ。\n\n{area}で飲み・ごはん候補を増やしたい人は、{restaurant}をチェックしてみてください。\n実食写真はこちらに置いてます。\n{instagram_url}",
+        f"お店選びで見ているポイント。\n1. 駅から近い\n2. 写真がちゃんとうまそう\n3. 直近口コミが荒れてない\n4. 仕事終わりでも入りやすい\n\n今回のメモは{area}の{restaurant}です。",
+        f"今日のサラリーマングルメメモ: {restaurant}\n\n{title}\n\n新橋・上野・都内中心に、実際に行った店を写真付きで残しています。\n{instagram_url}",
     ]
     return templates[template_index % len(templates)][:500]
 
@@ -159,12 +162,19 @@ def planned_post_key(date_text, slot_index):
     return f"{date_text}-{slot_index:02d}"
 
 
+def scheduled_minute_for(rng, schedule_minutes, index):
+    base_minute = schedule_minutes[index % len(schedule_minutes)]
+    minute = (base_minute + rng.randrange(0, 4) * 2) % 60
+    return 2 if minute == 0 else minute
+
+
 def ensure_daily_plan(config, date_text=None):
     date_text = date_text or datetime.now(JST).date().isoformat()
     threads_config = config.get("threads", {})
     posts_per_day = int(threads_config.get("posts_per_day", 10))
     profile_url = threads_config.get("instagram_profile_url", "https://www.instagram.com/mogmogtro112233/")
     schedule_hours = threads_config.get("schedule_hours") or DEFAULT_SCHEDULE_HOURS
+    schedule_minutes = threads_config.get("schedule_minutes") or DEFAULT_SCHEDULE_MINUTES
     reviews = [review for review in load_reviews() if review.get("restaurant_name")]
     if not reviews:
         raise RuntimeError("No reviews are available. Run sync first.")
@@ -178,25 +188,42 @@ def ensure_daily_plan(config, date_text=None):
     created = []
     for index in range(posts_per_day):
         key = planned_post_key(date_text, index)
-        if key in existing_keys:
-            continue
         review = ordered_reviews[index % len(ordered_reviews)]
         seed = review_seed(review)
+        scheduled_hour = schedule_hours[index % len(schedule_hours)]
+        minute_rng = random.Random(f"{date_text}-{index}-minute")
+        scheduled_minute = scheduled_minute_for(minute_rng, schedule_minutes, index)
+        text = build_post_text(index, seed, profile_url)
+        if key in existing_keys:
+            for post in posts:
+                if post.get("key") != key or post.get("status") != "planned":
+                    continue
+                if post.get("style_version") == POST_STYLE_VERSION and post.get("scheduled_minute") is not None:
+                    break
+                post["scheduled_hour"] = scheduled_hour
+                post["scheduled_minute"] = scheduled_minute
+                post["text"] = text
+                post["style_version"] = POST_STYLE_VERSION
+                post["updated_at"] = now_iso()
+                break
+            continue
         post = {
             "key": key,
             "date": date_text,
             "slot_index": index,
-            "scheduled_hour": schedule_hours[index % len(schedule_hours)],
+            "scheduled_hour": scheduled_hour,
+            "scheduled_minute": scheduled_minute,
             "status": "planned",
             "review_id": review.get("review_id"),
             "restaurant_name": review.get("restaurant_name"),
-            "text": build_post_text(index, seed, profile_url),
+            "text": text,
+            "style_version": POST_STYLE_VERSION,
             "created_at": now_iso(),
             "updated_at": now_iso(),
         }
         posts.append(post)
         created.append(post)
-    if created:
+    if created or any(post.get("date") == date_text and post.get("style_version") == POST_STYLE_VERSION for post in posts):
         posts.sort(key=lambda item: (item.get("date", ""), item.get("slot_index", 0)))
         save_threads_posts(posts)
     return created, [post for post in posts if post.get("date") == date_text]
@@ -212,7 +239,7 @@ def publish_due_post(config, dry_run=False, now=None):
         for post in posts
         if post.get("date") == date_text
         and post.get("status") == "planned"
-        and int(post.get("scheduled_hour", 24)) <= now.hour
+        and (int(post.get("scheduled_hour", 24)), int(post.get("scheduled_minute", 0))) <= (now.hour, now.minute)
     ]
     due.sort(key=lambda item: item.get("slot_index", 0))
     if not due:
