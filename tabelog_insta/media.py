@@ -204,7 +204,7 @@ def generate_feed_cover_image(review):
     except Exception as exc:
         raise RuntimeError("Pillow is required to generate feed cover images.") from exc
 
-    width, height = 1080, 1920
+    width, height = 1080, 1350
     bg = Image.new("RGB", (width, height), "#171717")
     image_urls = review.get("image_urls") or []
     if image_urls:
@@ -217,9 +217,8 @@ def generate_feed_cover_image(review):
 
     overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     overlay_draw = ImageDraw.Draw(overlay)
-    overlay_draw.rectangle((0, 0, width, 620), fill=(0, 0, 0, 54))
-    overlay_draw.rectangle((0, 900, width, 1580), fill=(0, 0, 0, 84))
-    card = (52, 920, 1028, 1498)
+    overlay_draw.rectangle((0, 610, width, 1230), fill=(0, 0, 0, 84))
+    card = (52, 650, 1028, 1190)
     overlay_draw.rounded_rectangle(card, radius=46, fill=(255, 252, 245, 246))
     bg = Image.alpha_composite(bg.convert("RGBA"), overlay)
     draw = ImageDraw.Draw(bg)
@@ -229,7 +228,7 @@ def generate_feed_cover_image(review):
     area_label = f"{area_label}グルメ"
     area_box = draw.textbbox((0, 0), area_label, font=area_font)
     pill_w = min(area_box[2] - area_box[0] + 70, 860)
-    pill = (88, 870, 88 + pill_w, 948)
+    pill = (88, 600, 88 + pill_w, 678)
     draw.rounded_rectangle(pill, radius=39, fill="#111111")
     label_x = pill[0] + (pill[2] - pill[0] - (area_box[2] - area_box[0])) / 2 - area_box[0]
     label_y = pill[1] + (pill[3] - pill[1] - (area_box[3] - area_box[1])) / 2 - area_box[1]
