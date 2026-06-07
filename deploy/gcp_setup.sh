@@ -70,7 +70,7 @@ fi
 if gcloud scheduler jobs describe "${SERVICE}-threads-tick" --location "${REGION}" >/dev/null 2>&1; then
   gcloud scheduler jobs update http "${SERVICE}-threads-tick" \
     --location "${REGION}" \
-    --schedule "0 * * * *" \
+    --schedule "*/2 * * * *" \
     --time-zone "Asia/Tokyo" \
     --uri "${SERVICE_URL}/threads/tick" \
     --http-method POST \
@@ -78,7 +78,7 @@ if gcloud scheduler jobs describe "${SERVICE}-threads-tick" --location "${REGION
 else
   gcloud scheduler jobs create http "${SERVICE}-threads-tick" \
     --location "${REGION}" \
-    --schedule "0 * * * *" \
+    --schedule "*/2 * * * *" \
     --time-zone "Asia/Tokyo" \
     --uri "${SERVICE_URL}/threads/tick" \
     --http-method POST \
