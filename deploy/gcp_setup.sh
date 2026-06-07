@@ -56,7 +56,7 @@ if gcloud scheduler jobs describe "${SERVICE}-sync" --location "${REGION}" >/dev
     --time-zone "Asia/Tokyo" \
     --uri "${SERVICE_URL}/sync" \
     --http-method POST \
-    --headers "X-Sync-Token=${SYNC_TOKEN_VALUE:-CHANGE_ME_IN_CONSOLE}"
+    --update-headers "X-Sync-Token=${SYNC_TOKEN_VALUE:-CHANGE_ME_IN_CONSOLE}"
 else
   gcloud scheduler jobs create http "${SERVICE}-sync" \
     --location "${REGION}" \
@@ -74,7 +74,7 @@ if gcloud scheduler jobs describe "${SERVICE}-threads-tick" --location "${REGION
     --time-zone "Asia/Tokyo" \
     --uri "${SERVICE_URL}/threads/tick" \
     --http-method POST \
-    --headers "X-Sync-Token=${SYNC_TOKEN_VALUE:-CHANGE_ME_IN_CONSOLE}"
+    --update-headers "X-Sync-Token=${SYNC_TOKEN_VALUE:-CHANGE_ME_IN_CONSOLE}"
 else
   gcloud scheduler jobs create http "${SERVICE}-threads-tick" \
     --location "${REGION}" \
@@ -92,7 +92,7 @@ if gcloud scheduler jobs describe "${SERVICE}-threads-engage" --location "${REGI
     --time-zone "Asia/Tokyo" \
     --uri "${SERVICE_URL}/threads/engage" \
     --http-method POST \
-    --headers "X-Sync-Token=${SYNC_TOKEN_VALUE:-CHANGE_ME_IN_CONSOLE}"
+    --update-headers "X-Sync-Token=${SYNC_TOKEN_VALUE:-CHANGE_ME_IN_CONSOLE}"
 else
   gcloud scheduler jobs create http "${SERVICE}-threads-engage" \
     --location "${REGION}" \
