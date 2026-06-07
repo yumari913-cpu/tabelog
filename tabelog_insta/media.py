@@ -337,9 +337,7 @@ def generate_story_image(review):
 
     overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     overlay_draw = ImageDraw.Draw(overlay)
-    overlay_draw.rectangle((0, 0, width, height), fill=(0, 0, 0, 74))
-    overlay_draw.rectangle((0, 0, width, 410), fill=(0, 0, 0, 58))
-    overlay_draw.rectangle((0, 1510, width, height), fill=(0, 0, 0, 132))
+    overlay_draw.rectangle((0, 0, width, height), fill=(0, 0, 0, 82))
 
     if image_urls:
         photo_path = download_image(image_urls[0], review["review_id"], 0)
@@ -361,25 +359,38 @@ def generate_story_image(review):
     restaurant_name = review.get("restaurant_name", "")
 
     label_font = font(42, bold=True)
-    title_font = font(76, bold=True)
     small_font = font(34, bold=True)
 
     area_label = f"{area_text.split('、')[0].strip() or area_text}グルメ"
     area_box = draw.textbbox((0, 0), area_label, font=label_font)
     pill_w = min(area_box[2] - area_box[0] + 72, 920)
-    draw.rounded_rectangle((78, 104, 78 + pill_w, 178), radius=37, fill="#ffffff")
-    draw.text((114, 119), area_label, fill="#151515", font=label_font)
+    text_card = (80, 690, 1000, 1230)
+    draw.rounded_rectangle(text_card, radius=48, fill="#fffdf7")
 
-    name_lines = wrap_text(draw, restaurant_name, title_font, 950)[:3]
-    line_height = 92
-    y = 1588
+    pill = (120, 650, 120 + pill_w, 728)
+    draw.rounded_rectangle(pill, radius=39, fill="#111111")
+    label_x = pill[0] + (pill[2] - pill[0] - (area_box[2] - area_box[0])) / 2 - area_box[0]
+    label_y = pill[1] + (pill[3] - pill[1] - (area_box[3] - area_box[1])) / 2 - area_box[1]
+    draw.text((label_x, label_y), area_label, fill="#ffffff", font=label_font)
+
+    title_font, name_lines, total_height, line_gap = fit_text_lines(
+        draw,
+        restaurant_name,
+        max_width=790,
+        max_lines=3,
+        max_total_height=310,
+        start_size=82,
+        min_size=50,
+    )
+    y = text_card[1] + ((text_card[3] - text_card[1]) - total_height) / 2 + 28
     for line in name_lines:
         box = draw.textbbox((0, 0), line, font=title_font)
-        draw.text(((width - (box[2] - box[0])) / 2, y), line, fill="#ffffff", font=title_font)
-        y += line_height
+        draw.text(((width - (box[2] - box[0])) / 2, y), line, fill="#111111", font=title_font)
+        y += (box[3] - box[1]) + line_gap
 
-    draw.line((160, 1844, 920, 1844), fill="#ffffff", width=4)
-    draw.text((320, 1868), "詳しくはフィード投稿へ", fill="#ffffff", font=small_font)
+    footer = "詳しくはフィード投稿へ"
+    footer_box = draw.textbbox((0, 0), footer, font=small_font)
+    draw.text(((width - (footer_box[2] - footer_box[0])) / 2, 1768), footer, fill="#ffffff", font=small_font)
 
     output = MEDIA_DIR / f"{review['review_id']}_story.jpg"
     bg.convert("RGB").save(output, quality=94)
