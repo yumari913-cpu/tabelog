@@ -53,31 +53,48 @@ gcloud run deploy "${SERVICE}" \
 
 SERVICE_URL="$(gcloud run services describe "${SERVICE}" --region "${REGION}" --format='value(status.url)')"
 
-if gcloud scheduler jobs describe "${SERVICE}-sync" --location "${REGION}" >/dev/null 2>&1; then
-  gcloud scheduler jobs update http "${SERVICE}-sync" \
+gcloud scheduler jobs delete "${SERVICE}-sync" \
+  --location "${REGION}" \
+  --quiet >/dev/null 2>&1 || true
+
+if gcloud scheduler jobs describe "${SERVICE}-instagram-sync-review-urls" --location "${REGION}" >/dev/null 2>&1; then
+  gcloud scheduler jobs update http "${SERVICE}-instagram-sync-review-urls" \
     --location "${REGION}" \
-    --schedule "0 * * * *" \
+    --schedule "0 10 * * 1" \
     --time-zone "Asia/Tokyo" \
-    --uri "${SERVICE_URL}/sync" \
+    --uri "${SERVICE_URL}/instagram/sync-review-urls" \
     --http-method POST \
     --update-headers "X-Sync-Token=${SYNC_TOKEN_VALUE:-CHANGE_ME_IN_CONSOLE}"
 else
-  gcloud scheduler jobs create http "${SERVICE}-sync" \
+  gcloud scheduler jobs create http "${SERVICE}-instagram-sync-review-urls" \
     --location "${REGION}" \
-    --schedule "0 * * * *" \
+    --schedule "0 10 * * 1" \
     --time-zone "Asia/Tokyo" \
-    --uri "${SERVICE_URL}/sync" \
+    --uri "${SERVICE_URL}/instagram/sync-review-urls" \
     --http-method POST \
     --headers "X-Sync-Token=${SYNC_TOKEN_VALUE:-CHANGE_ME_IN_CONSOLE}"
 fi
 
-# Keep Cloud Scheduler within its free tier by using at most 3 jobs.
-gcloud scheduler jobs delete "${SERVICE}-instagram-sync-review-urls" \
-  --location "${REGION}" \
-  --quiet >/dev/null 2>&1 || true
-gcloud scheduler jobs delete "${SERVICE}-instagram-post-next" \
-  --location "${REGION}" \
-  --quiet >/dev/null 2>&1 || true
+if gcloud scheduler jobs describe "${SERVICE}-instagram-post-next" --location "${REGION}" >/dev/null 2>&1; then
+  gcloud scheduler jobs update http "${SERVICE}-instagram-post-next" \
+    --location "${REGION}" \
+    --schedule "0 20 * * *" \
+    --time-zone "Asia/Tokyo" \
+    --uri "${SERVICE_URL}/instagram/post-next" \
+    --http-method POST \
+    --attempt-deadline "30m" \
+    --update-headers "X-Sync-Token=${SYNC_TOKEN_VALUE:-CHANGE_ME_IN_CONSOLE}"
+else
+  gcloud scheduler jobs create http "${SERVICE}-instagram-post-next" \
+    --location "${REGION}" \
+    --schedule "0 20 * * *" \
+    --time-zone "Asia/Tokyo" \
+    --uri "${SERVICE_URL}/instagram/post-next" \
+    --http-method POST \
+    --attempt-deadline "30m" \
+    --headers "X-Sync-Token=${SYNC_TOKEN_VALUE:-CHANGE_ME_IN_CONSOLE}"
+fi
+
 
 if gcloud scheduler jobs describe "${SERVICE}-threads-tick" --location "${REGION}" >/dev/null 2>&1; then
   gcloud scheduler jobs update http "${SERVICE}-threads-tick" \
