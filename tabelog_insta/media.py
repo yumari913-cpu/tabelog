@@ -64,6 +64,31 @@ def wrap_text(draw, text, text_font, max_width):
     return lines
 
 
+def fit_text_lines(draw, text, max_width, max_lines, max_total_height, start_size, min_size):
+    for size in range(start_size, min_size - 1, -4):
+        text_font = font(size, bold=True)
+        lines = wrap_text(draw, text, text_font, max_width)
+        if len(lines) > max_lines:
+            continue
+        line_boxes = [draw.textbbox((0, 0), line, font=text_font) for line in lines]
+        line_heights = [box[3] - box[1] for box in line_boxes]
+        total_height = sum(line_heights) + max(0, len(lines) - 1) * int(size * 0.2)
+        widest = max((box[2] - box[0] for box in line_boxes), default=0)
+        if widest <= max_width and total_height <= max_total_height:
+            return text_font, lines, total_height, int(size * 0.2)
+
+    text_font = font(min_size, bold=True)
+    lines = wrap_text(draw, text, text_font, max_width)[:max_lines]
+    if lines:
+        overflow = wrap_text(draw, lines[-1], text_font, max_width - 60)
+        if overflow:
+            lines[-1] = overflow[0].rstrip("、,。") + "…"
+    line_boxes = [draw.textbbox((0, 0), line, font=text_font) for line in lines]
+    line_heights = [box[3] - box[1] for box in line_boxes]
+    total_height = sum(line_heights) + max(0, len(lines) - 1) * int(min_size * 0.2)
+    return text_font, lines, total_height, int(min_size * 0.2)
+
+
 def cover_crop(image, width=1080, height=1350):
     from PIL import Image
 
@@ -175,11 +200,11 @@ def fit_image_to_canvas(image, width=1080, height=1350, background="#fffaf0"):
 def generate_feed_cover_image(review):
     ensure_dirs()
     try:
-        from PIL import Image, ImageDraw, ImageFilter
+        from PIL import Image, ImageDraw
     except Exception as exc:
         raise RuntimeError("Pillow is required to generate feed cover images.") from exc
 
-    width, height = 1080, 1350
+    width, height = 1080, 1920
     bg = Image.new("RGB", (width, height), "#171717")
     image_urls = review.get("image_urls") or []
     if image_urls:
@@ -192,25 +217,32 @@ def generate_feed_cover_image(review):
 
     overlay = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     overlay_draw = ImageDraw.Draw(overlay)
-    overlay_draw.rectangle((0, 0, width, 116), fill=(0, 0, 0, 78))
-    overlay_draw.rounded_rectangle((52, 738, 1028, 1248), radius=42, fill=(255, 252, 245, 244))
-    overlay_draw.rounded_rectangle((78, 766, 1002, 1220), radius=30, outline=(18, 18, 18, 42), width=3)
+    overlay_draw.rectangle((0, 0, width, 620), fill=(0, 0, 0, 54))
+    overlay_draw.rectangle((0, 1280, width, height), fill=(0, 0, 0, 84))
+    card = (52, 1210, 1028, 1798)
+    overlay_draw.rounded_rectangle(card, radius=46, fill=(255, 252, 245, 246))
     bg = Image.alpha_composite(bg.convert("RGBA"), overlay)
     draw = ImageDraw.Draw(bg)
 
-    area_font = font(42, bold=True)
+    area_font = font(44, bold=True)
     area_label = area_text.split("、")[0].strip() or area_text
     area_label = f"{area_label}グルメ"
     area_box = draw.textbbox((0, 0), area_label, font=area_font)
-    pill_w = area_box[2] - area_box[0] + 62
-    draw.rounded_rectangle((88, 692, 88 + pill_w, 760), radius=34, fill="#111111")
-    draw.text((119, 706), area_label, fill="#ffffff", font=area_font)
+    pill_w = min(area_box[2] - area_box[0] + 70, 860)
+    pill = (88, 1160, 88 + pill_w, 1238)
+    draw.rounded_rectangle(pill, radius=39, fill="#111111")
+    draw.text((123, 1176), area_label, fill="#ffffff", font=area_font)
 
-    name_font = font(92, bold=True)
-    name_lines = wrap_text(draw, restaurant_name, name_font, 850)[:3]
-    line_heights = [draw.textbbox((0, 0), line, font=name_font)[3] for line in name_lines]
-    total_height = sum(line_heights) + max(0, len(name_lines) - 1) * 18
-    y = 998 - total_height / 2
+    name_font, name_lines, total_height, line_gap = fit_text_lines(
+        draw,
+        restaurant_name,
+        max_width=850,
+        max_lines=3,
+        max_total_height=350,
+        start_size=92,
+        min_size=52,
+    )
+    y = card[1] + ((card[3] - card[1]) - total_height) / 2 + 22
     for line in name_lines:
         box = draw.textbbox((0, 0), line, font=name_font)
         draw.text(
@@ -219,9 +251,7 @@ def generate_feed_cover_image(review):
             fill="#111111",
             font=name_font,
         )
-        y += draw.textbbox((0, 0), line, font=name_font)[3] + 18
-
-    draw.line((168, 1154, 912, 1154), fill="#111111", width=4)
+        y += (box[3] - box[1]) + line_gap
 
     output = MEDIA_DIR / f"{review['review_id']}_feed_cover.jpg"
     bg.convert("RGB").save(output, quality=94)
