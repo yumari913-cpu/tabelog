@@ -41,9 +41,13 @@ gcloud run deploy "${SERVICE}" \
   --region "${REGION}" \
   --allow-unauthenticated \
   --min-instances 0 \
+  --max-instances 1 \
   --cpu 1 \
   --memory 512Mi \
   --concurrency 80 \
+  --timeout 180 \
+  --cpu-throttling \
+  --no-cpu-boost \
   --set-env-vars "TABELOG_REVIEWER_URL=${REVIEWER_URL},STORAGE_BUCKET=${BUCKET},PUBLIC_BASE_URL=https://storage.googleapis.com/${BUCKET},AUTO_PUBLISH_FEED=false,AUTO_PUBLISH_STORY=false,AUTO_PUBLISH_REEL=false,INSTAGRAM_POST_STORY=${INSTAGRAM_POST_STORY:-true},THREADS_AUTO_PUBLISH=${THREADS_AUTO_PUBLISH:-false},THREADS_AUTO_REPLY=${THREADS_AUTO_REPLY:-false},THREADS_POSTS_PER_DAY=${THREADS_POSTS_PER_DAY:-10},THREADS_INSTAGRAM_PROFILE_URL=${THREADS_INSTAGRAM_PROFILE_URL:-https://www.instagram.com/mogmogtro112233/}" \
   --set-secrets "IG_USER_ID=ig-user-id:latest,IG_ACCESS_TOKEN=ig-access-token:latest,SYNC_TOKEN=sync-token:latest,THREADS_USER_ID=threads-user-id:latest,THREADS_ACCESS_TOKEN=threads-access-token:latest"
 
@@ -67,43 +71,13 @@ else
     --headers "X-Sync-Token=${SYNC_TOKEN_VALUE:-CHANGE_ME_IN_CONSOLE}"
 fi
 
-if gcloud scheduler jobs describe "${SERVICE}-instagram-sync-review-urls" --location "${REGION}" >/dev/null 2>&1; then
-  gcloud scheduler jobs update http "${SERVICE}-instagram-sync-review-urls" \
-    --location "${REGION}" \
-    --schedule "0 10 * * 1" \
-    --time-zone "Asia/Tokyo" \
-    --uri "${SERVICE_URL}/instagram/sync-review-urls" \
-    --http-method POST \
-    --update-headers "X-Sync-Token=${SYNC_TOKEN_VALUE:-CHANGE_ME_IN_CONSOLE}"
-else
-  gcloud scheduler jobs create http "${SERVICE}-instagram-sync-review-urls" \
-    --location "${REGION}" \
-    --schedule "0 10 * * 1" \
-    --time-zone "Asia/Tokyo" \
-    --uri "${SERVICE_URL}/instagram/sync-review-urls" \
-    --http-method POST \
-    --headers "X-Sync-Token=${SYNC_TOKEN_VALUE:-CHANGE_ME_IN_CONSOLE}"
-fi
-
-if gcloud scheduler jobs describe "${SERVICE}-instagram-post-next" --location "${REGION}" >/dev/null 2>&1; then
-  gcloud scheduler jobs update http "${SERVICE}-instagram-post-next" \
-    --location "${REGION}" \
-    --schedule "0 20 * * *" \
-    --time-zone "Asia/Tokyo" \
-    --uri "${SERVICE_URL}/instagram/post-next" \
-    --http-method POST \
-    --attempt-deadline "30m" \
-    --update-headers "X-Sync-Token=${SYNC_TOKEN_VALUE:-CHANGE_ME_IN_CONSOLE}"
-else
-  gcloud scheduler jobs create http "${SERVICE}-instagram-post-next" \
-    --location "${REGION}" \
-    --schedule "0 20 * * *" \
-    --time-zone "Asia/Tokyo" \
-    --uri "${SERVICE_URL}/instagram/post-next" \
-    --http-method POST \
-    --attempt-deadline "30m" \
-    --headers "X-Sync-Token=${SYNC_TOKEN_VALUE:-CHANGE_ME_IN_CONSOLE}"
-fi
+# Keep Cloud Scheduler within its free tier by using at most 3 jobs.
+gcloud scheduler jobs delete "${SERVICE}-instagram-sync-review-urls" \
+  --location "${REGION}" \
+  --quiet >/dev/null 2>&1 || true
+gcloud scheduler jobs delete "${SERVICE}-instagram-post-next" \
+  --location "${REGION}" \
+  --quiet >/dev/null 2>&1 || true
 
 if gcloud scheduler jobs describe "${SERVICE}-threads-tick" --location "${REGION}" >/dev/null 2>&1; then
   gcloud scheduler jobs update http "${SERVICE}-threads-tick" \
@@ -142,3 +116,34 @@ else
 fi
 
 echo "Service URL: ${SERVICE_URL}"
+
+CLOUDBUILD_BUCKET="${PROJECT_ID}_cloudbuild"
+cat >/tmp/cloudbuild-lifecycle.json <<'JSON'
+{
+  "rule": [
+    {
+      "action": {"type": "Delete"},
+      "condition": {"age": 7}
+    }
+  ]
+}
+JSON
+gcloud storage buckets update "gs://${CLOUDBUILD_BUCKET}" --lifecycle-file=/tmp/cloudbuild-lifecycle.json || true
+
+cat >/tmp/artifact-cleanup-policy.json <<'JSON'
+[
+  {
+    "name": "keep-latest-3",
+    "action": {"type": "Keep"},
+    "mostRecentVersions": {"keepCount": 3}
+  },
+  {
+    "name": "delete-older-than-7d",
+    "action": {"type": "Delete"},
+    "condition": {"olderThan": "7d"}
+  }
+]
+JSON
+gcloud artifacts repositories set-cleanup-policies "${ARTIFACT_REPOSITORY}" \
+  --location="${REGION}" \
+  --policy=/tmp/artifact-cleanup-policy.json || true
