@@ -2,6 +2,19 @@ name: Deploy to GCP Cloud Run
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - app.py
+      - cli.py
+      - scheduler.py
+      - threads_scheduler.py
+      - deploy/**
+      - tabelog_insta/**
+      - .github/workflows/deploy-gcp.yml
+      - Dockerfile
+      - requirements.txt
 
 jobs:
   deploy:
