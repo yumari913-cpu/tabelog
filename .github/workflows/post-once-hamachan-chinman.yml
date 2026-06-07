@@ -1,0 +1,74 @@
+name: Post Once Hamachan Chinman
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/post-once-hamachan-chinman.yml"
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Japanese fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build validate commit and publish reposts
+        env:
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          post_review() {
+            local review_url="$1"
+            local label="$2"
+            local output_file="build_${label}.txt"
+
+            python scripts/build_post_assets.py \
+              --review-url "${review_url}" \
+              --caption-style "story" | tee "${output_file}"
+
+            local review_id
+            local manifest
+            review_id="$(grep '^review_id=' "${output_file}" | cut -d= -f2)"
+            manifest="$(grep '^manifest=' "${output_file}" | cut -d= -f2-)"
+
+            python scripts/validate_generated_assets.py --manifest "${manifest}"
+
+            git add generated/
+            if git diff --cached --quiet; then
+              echo "No generated changes for ${review_id}"
+            else
+              git commit -m "Add Instagram repost assets for ${review_id}"
+              git pull --rebase origin main
+              git push
+            fi
+
+            local raw_base
+            raw_base="https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/$(git rev-parse HEAD)"
+            python scripts/publish_generated_post.py \
+              --manifest "${manifest}" \
+              --raw-base-url "${raw_base}"
+          }
+
+          post_review "https://tabelog.com/rvwr/018712231/rvwdtl/B527303939/" "hamachan"
+          post_review "https://tabelog.com/rvwr/018712231/rvwdtl/B526173010/" "chinman"
