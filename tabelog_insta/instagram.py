@@ -1,4 +1,5 @@
 import json
+import time
 from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -30,10 +31,42 @@ class InstagramClient:
             body = exc.read().decode("utf-8", errors="replace")
             raise RuntimeError(f"Instagram API error {exc.code}: {body}") from exc
 
+    def _get(self, path, params):
+        if not self.ready:
+            raise RuntimeError("Instagram credentials are not configured.")
+        params = dict(params)
+        params["access_token"] = self.access_token
+        url = f"https://graph.facebook.com/{self.graph_version}/{path}?{urlencode(params)}"
+        req = Request(url, method="GET")
+        try:
+            with urlopen(req, timeout=60) as res:
+                return json.loads(res.read().decode("utf-8"))
+        except HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(f"Instagram API error {exc.code}: {body}") from exc
+
     def create_media(self, **params):
         return self._post(f"{self.ig_user_id}/media", params)
 
-    def publish_media(self, creation_id):
+    def media_status(self, creation_id):
+        return self._get(creation_id, {"fields": "status_code,status"})
+
+    def wait_for_media(self, creation_id, timeout=120, interval=5):
+        deadline = time.time() + timeout
+        last_status = {}
+        while time.time() < deadline:
+            last_status = self.media_status(creation_id)
+            status_code = last_status.get("status_code")
+            if status_code in {"FINISHED", "PUBLISHED"}:
+                return last_status
+            if status_code in {"ERROR", "EXPIRED"}:
+                raise RuntimeError(f"Instagram media container is not publishable: {last_status}")
+            time.sleep(interval)
+        raise RuntimeError(f"Instagram media container was not ready in time: {last_status}")
+
+    def publish_media(self, creation_id, wait=True):
+        if wait:
+            self.wait_for_media(creation_id)
         return self._post(f"{self.ig_user_id}/media_publish", {"creation_id": creation_id})
 
     def publish_feed(self, image_url, caption):
