@@ -54,10 +54,7 @@ def main():
 
     results["feed"] = client.publish_carousel(image_urls, manifest.get("caption", ""))
     if story_url and not args.skip_story:
-        try:
-            results["story"] = client.publish_story(story_url)
-        except Exception as exc:
-            results["story_error"] = str(exc)
+        results["story"] = client.publish_story(story_url)
 
     print(json.dumps(results, ensure_ascii=False, indent=2))
 
