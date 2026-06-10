@@ -2,7 +2,8 @@ name: Daily Instagram Post
 
 on:
   schedule:
-    - cron: "0 11 * * *"
+    - cron: "0,15,30,45 11 * * *"
+    - cron: "0,30 12 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -39,7 +40,19 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Check whether today's post is already done
+        id: today
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/check_posted_today.py \
+            --posted-path posted_review_urls.csv \
+            --timezone Asia/Tokyo | tee posted_today.txt
+          SHOULD_POST="$(grep '^should_post=' posted_today.txt | cut -d= -f2-)"
+          echo "should_post=${SHOULD_POST}" >> "$GITHUB_OUTPUT"
+
       - name: Select next review
+        if: steps.today.outputs.should_post == 'true'
         id: select
         shell: bash
         run: |
@@ -59,11 +72,11 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Stop when all reviews are posted
-        if: steps.select.outputs.has_next != 'true'
+        if: steps.today.outputs.should_post == 'true' && steps.select.outputs.has_next != 'true'
         run: echo "All review URLs have already been posted."
 
       - name: Build post assets
-        if: steps.select.outputs.has_next == 'true'
+        if: steps.today.outputs.should_post == 'true' && steps.select.outputs.has_next == 'true'
         id: build
         shell: bash
         run: |
@@ -81,7 +94,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       - name: Commit generated assets
-        if: steps.select.outputs.has_next == 'true'
+        if: steps.today.outputs.should_post == 'true' && steps.select.outputs.has_next == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -98,7 +111,7 @@ jobs:
           fi
 
       - name: Publish or preview
-        if: steps.select.outputs.has_next == 'true'
+        if: steps.today.outputs.should_post == 'true' && steps.select.outputs.has_next == 'true'
         env:
           IG_USER_ID: ${{ secrets.IG_USER_ID }}
           IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
@@ -118,7 +131,7 @@ jobs:
           fi
 
       - name: Mark review as posted
-        if: steps.select.outputs.has_next == 'true' && (github.event.inputs.dry_run || 'false') == 'false'
+        if: steps.today.outputs.should_post == 'true' && steps.select.outputs.has_next == 'true' && (github.event.inputs.dry_run || 'false') == 'false'
         run: |
           python scripts/mark_review_posted.py \
             --posted-path posted_review_urls.csv \
@@ -127,7 +140,7 @@ jobs:
             --github-run "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
       - name: Commit posted marker
-        if: steps.select.outputs.has_next == 'true' && (github.event.inputs.dry_run || 'false') == 'false'
+        if: steps.today.outputs.should_post == 'true' && steps.select.outputs.has_next == 'true' && (github.event.inputs.dry_run || 'false') == 'false'
         shell: bash
         run: |
           set -euo pipefail
