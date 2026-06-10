@@ -16,6 +16,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--posted-path", default="posted_review_urls.csv")
     parser.add_argument("--timezone", default="Asia/Tokyo")
+    parser.add_argument("--posting-start-hour", type=int, default=18)
     args = parser.parse_args()
 
     tz = ZoneInfo(args.timezone)
@@ -30,7 +31,8 @@ def main():
             posted_at = datetime.strptime(value, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
         except ValueError:
             continue
-        if posted_at.astimezone(tz).date() == today:
+        local_posted_at = posted_at.astimezone(tz)
+        if local_posted_at.date() == today and local_posted_at.hour >= args.posting_start_hour:
             posted_today = True
             break
 
