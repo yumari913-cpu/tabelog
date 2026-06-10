@@ -20,8 +20,15 @@ def main():
     args = parser.parse_args()
 
     tz = ZoneInfo(args.timezone)
-    today = datetime.now(tz).date()
+    now = datetime.now(tz)
+    today = now.date()
     posted_today = False
+
+    if now.hour < args.posting_start_hour:
+        print("posted_today=false")
+        print("should_post=false")
+        print(f"reason=before_posting_window_{args.posting_start_hour}")
+        return
 
     for row in read_rows(Path(args.posted_path)):
         value = row.get("投稿日時UTC", "").strip()
