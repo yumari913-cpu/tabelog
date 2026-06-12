@@ -1,11 +1,6 @@
 name: Daily Instagram Post
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - .github/workflows/daily-instagram-post.yml
   schedule:
     - cron: "0,15,30,45 11 * * *"
     - cron: "0,30 12 * * *"
@@ -44,6 +39,17 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt
+
+      - name: Apply caption policy
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("tabelog_insta/scraper.py")
+          text = path.read_text(encoding="utf-8")
+          text = text.replace('    parts.append("後で見返せるように【保存】がおすすめです。次のお店選びに使ってください。")\n\n', '')
+          path.write_text(text, encoding="utf-8")
+          PY
 
       - name: Check whether today's post is already done
         id: today
