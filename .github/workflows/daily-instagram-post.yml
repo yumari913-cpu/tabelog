@@ -2,8 +2,10 @@ name: Daily Instagram Post
 
 on:
   schedule:
-    - cron: "0,15,30,45 11 * * *"
-    - cron: "0,30 12 * * *"
+    # Run every 15 minutes from 18:00 to 23:45 JST.
+    # GitHub-hosted schedules can be delayed or dropped, so a wider window
+    # gives the daily guard several chances to publish exactly once per day.
+    - cron: "0,15,30,45 9-14 * * *"
   workflow_dispatch:
     inputs:
       dry_run:
