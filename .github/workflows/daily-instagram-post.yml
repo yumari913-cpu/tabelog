@@ -6,11 +6,6 @@ on:
     # GitHub-hosted schedules can be delayed or dropped, so a wider window
     # gives the daily guard several chances to publish exactly once per day.
     - cron: "0,15,30,45 9-14 * * *"
-  push:
-    branches:
-      - main
-    paths:
-      - ".github/workflows/daily-instagram-post.yml"
   workflow_dispatch:
     inputs:
       dry_run:
