@@ -1,6 +1,9 @@
 name: Instagram Growth Analysis
 
 on:
+  push:
+    paths:
+      - ".github/workflows/instagram-growth-analysis.yml"
   schedule:
     - cron: "0 13 * * 0"
   workflow_dispatch:
