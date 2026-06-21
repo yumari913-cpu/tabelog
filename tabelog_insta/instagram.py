@@ -104,6 +104,16 @@ class InstagramClient:
         fields = "id,text,username,timestamp,like_count"
         return self._get(f"{media_id}/comments", {"fields": fields, "limit": str(limit)})
 
+    def hashtag_search(self, query):
+        return self._get("ig_hashtag_search", {"user_id": self.ig_user_id, "q": query})
+
+    def hashtag_recent_media(self, hashtag_id, fields=None, limit=10):
+        fields = fields or "id,caption,comments_count,like_count,media_type,permalink,timestamp,username"
+        return self._get(
+            f"{hashtag_id}/recent_media",
+            {"user_id": self.ig_user_id, "fields": fields, "limit": str(limit)},
+        )
+
 
 def public_url_for(config, local_path):
     base = config.get("public_base_url", "").rstrip("/")
