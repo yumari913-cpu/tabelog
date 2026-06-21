@@ -45,9 +45,10 @@ def main():
         raise SystemExit("IG_USER_ID and IG_ACCESS_TOKEN are required.")
 
     results = {}
+    if not story_url and not args.skip_story:
+        raise SystemExit("story_path is required unless --skip-story is set.")
+
     if args.story_only:
-        if not story_url:
-            raise SystemExit("story_path is required for story-only publishing.")
         results["story"] = client.publish_story(story_url)
         print(json.dumps(results, ensure_ascii=False, indent=2))
         return
