@@ -89,6 +89,21 @@ class InstagramClient:
         container = self.create_media(media_type="REELS", video_url=video_url, caption=caption)
         return self.publish_media(container["id"])
 
+    def user_media(self, fields=None, limit=25):
+        fields = fields or (
+            "id,caption,comments_count,like_count,media_product_type,"
+            "media_type,permalink,timestamp"
+        )
+        return self._get(f"{self.ig_user_id}/media", {"fields": fields, "limit": str(limit)})
+
+    def media_insights(self, media_id, metrics):
+        metric_value = ",".join(metrics)
+        return self._get(f"{media_id}/insights", {"metric": metric_value})
+
+    def media_comments(self, media_id, limit=50):
+        fields = "id,text,username,timestamp,like_count"
+        return self._get(f"{media_id}/comments", {"fields": fields, "limit": str(limit)})
+
 
 def public_url_for(config, local_path):
     base = config.get("public_base_url", "").rstrip("/")
