@@ -1,0 +1,53 @@
+name: Instagram Growth Analysis
+
+on:
+  schedule:
+    - cron: "0 13 * * 0"
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "分析する直近投稿数"
+        required: true
+        default: "25"
+        type: string
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Analyze Instagram growth
+        env:
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/analyze_instagram_growth.py \
+            --limit "${{ github.event.inputs.limit || '25' }}" \
+            --output-dir analytics
+
+      - name: Commit analytics updates
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add analytics/
+          if git diff --cached --quiet; then
+            echo "No analytics changes"
+          else
+            git commit -m "Update Instagram growth analytics"
+            git push
+          fi
