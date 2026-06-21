@@ -92,7 +92,18 @@ def is_relevant_hashtag(tag):
     return any(keyword in tag for keyword in keywords)
 
 
-def add_candidate(candidate_map, username, reason, permalink="", area="", genre="", text="", comment_likes=0, score=0):
+def add_candidate(
+    candidate_map,
+    username,
+    reason,
+    permalink="",
+    area="",
+    genre="",
+    text="",
+    comment_likes=0,
+    score=0,
+    is_comment=False,
+):
     username = clean(username)
     if not username:
         return
@@ -113,8 +124,9 @@ def add_candidate(candidate_map, username, reason, permalink="", area="", genre=
     )
     if reason not in current.get("reason", ""):
         current["reason"] = f"{current.get('reason', '')} / {reason}".strip(" /")
-    current["comment_count"] += 1 if text else 0
-    current["comment_like_total"] += int(numeric(comment_likes))
+    if is_comment:
+        current["comment_count"] += 1
+        current["comment_like_total"] += int(numeric(comment_likes))
     current["latest_comment"] = clean(text) or current.get("latest_comment", "")
     current["latest_post_permalink"] = permalink or current.get("latest_post_permalink", "")
     current["latest_post_area"] = area or current.get("latest_post_area", "")
@@ -271,6 +283,7 @@ def main():
                 genre=genre,
                 text=comment.get("text", ""),
                 comment_likes=comment.get("like_count", 0),
+                is_comment=True,
             )
 
         restaurant_name = ""
