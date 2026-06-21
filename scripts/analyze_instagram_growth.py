@@ -85,6 +85,43 @@ def score_candidate(comment_count, like_total):
     return (comment_count * 10) + like_total
 
 
+def is_relevant_hashtag(tag):
+    if not tag:
+        return False
+    keywords = ["グルメ", "ランチ", "ディナー", "カフェ", "中華", "焼肉", "寿司", "ラーメン", "居酒屋"]
+    return any(keyword in tag for keyword in keywords)
+
+
+def add_candidate(candidate_map, username, reason, permalink="", area="", genre="", text="", comment_likes=0, score=0):
+    username = clean(username)
+    if not username:
+        return
+    current = candidate_map.setdefault(
+        username,
+        {
+            "created_at": now_iso(),
+            "username": username,
+            "reason": reason,
+            "comment_count": 0,
+            "comment_like_total": 0,
+            "latest_comment": "",
+            "latest_post_permalink": "",
+            "latest_post_area": "",
+            "latest_post_genre": "",
+            "score": 0,
+        },
+    )
+    if reason not in current.get("reason", ""):
+        current["reason"] = f"{current.get('reason', '')} / {reason}".strip(" /")
+    current["comment_count"] += 1 if text else 0
+    current["comment_like_total"] += int(numeric(comment_likes))
+    current["latest_comment"] = clean(text) or current.get("latest_comment", "")
+    current["latest_post_permalink"] = permalink or current.get("latest_post_permalink", "")
+    current["latest_post_area"] = area or current.get("latest_post_area", "")
+    current["latest_post_genre"] = genre or current.get("latest_post_genre", "")
+    current["score"] = max(int(numeric(current.get("score"))), int(numeric(score)))
+
+
 def write_csv(path, rows, fieldnames):
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as handle:
@@ -194,6 +231,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--limit", type=int, default=25)
     parser.add_argument("--comments-limit", type=int, default=50)
+    parser.add_argument("--hashtag-limit", type=int, default=8)
+    parser.add_argument("--hashtag-media-limit", type=int, default=8)
     parser.add_argument("--output-dir", default="analytics")
     args = parser.parse_args()
 
@@ -205,11 +244,15 @@ def main():
     media_items = client.user_media(limit=args.limit).get("data", [])
     insight_rows = []
     candidate_map = {}
+    relevant_hashtags = []
 
     for media in media_items:
         media_id = media.get("id", "")
         caption = media.get("caption", "")
         area, genre, hashtags = extract_area_genre(caption)
+        for tag in hashtags:
+            if is_relevant_hashtag(tag) and tag not in relevant_hashtags:
+                relevant_hashtags.append(tag)
         insights = fetch_insights(client, media_id, DEFAULT_METRICS)
 
         comments = []
@@ -219,29 +262,16 @@ def main():
             comments = [{"username": "", "text": f"comments unsupported: {exc}", "like_count": 0}]
 
         for comment in comments:
-            username = clean(comment.get("username", ""))
-            if not username:
-                continue
-            current = candidate_map.setdefault(
-                username,
-                {
-                    "created_at": now_iso(),
-                    "username": username,
-                    "reason": "コメントしてくれた人",
-                    "comment_count": 0,
-                    "comment_like_total": 0,
-                    "latest_comment": "",
-                    "latest_post_permalink": "",
-                    "latest_post_area": "",
-                    "latest_post_genre": "",
-                },
+            add_candidate(
+                candidate_map,
+                comment.get("username", ""),
+                "コメントしてくれた人",
+                permalink=media.get("permalink", ""),
+                area=area,
+                genre=genre,
+                text=comment.get("text", ""),
+                comment_likes=comment.get("like_count", 0),
             )
-            current["comment_count"] += 1
-            current["comment_like_total"] += int(numeric(comment.get("like_count")))
-            current["latest_comment"] = clean(comment.get("text", ""))
-            current["latest_post_permalink"] = media.get("permalink", "")
-            current["latest_post_area"] = area
-            current["latest_post_genre"] = genre
 
         restaurant_name = ""
         title_match = re.search(r"・店舗名：([^\n\r]+)", caption)
@@ -264,11 +294,41 @@ def main():
         row.update(insights)
         insight_rows.append(row)
 
+    for tag in relevant_hashtags[: args.hashtag_limit]:
+        try:
+            hashtag_data = client.hashtag_search(tag).get("data", [])
+            if not hashtag_data:
+                continue
+            hashtag_id = hashtag_data[0].get("id")
+            recent_posts = client.hashtag_recent_media(
+                hashtag_id,
+                limit=args.hashtag_media_limit,
+            ).get("data", [])
+        except Exception:
+            continue
+
+        for post in recent_posts:
+            username = post.get("username", "")
+            post_caption = post.get("caption", "")
+            post_area, post_genre, _ = extract_area_genre(post_caption)
+            engagement_score = int(numeric(post.get("like_count"))) + int(numeric(post.get("comments_count"))) * 5
+            add_candidate(
+                candidate_map,
+                username,
+                f"関連ハッシュタグ投稿者 #{tag}",
+                permalink=post.get("permalink", ""),
+                area=post_area,
+                genre=post_genre,
+                text=post_caption[:120],
+                score=engagement_score,
+            )
+
     for candidate in candidate_map.values():
-        candidate["score"] = score_candidate(
+        comment_score = score_candidate(
             int(numeric(candidate.get("comment_count"))),
             int(numeric(candidate.get("comment_like_total"))),
         )
+        candidate["score"] = max(comment_score, int(numeric(candidate.get("score"))))
 
     insight_fields = [
         "collected_at",
