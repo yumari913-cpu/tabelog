@@ -39,7 +39,7 @@ def main():
         except ValueError:
             continue
         local_posted_at = posted_at.astimezone(tz)
-        if local_posted_at.date() == today and local_posted_at.hour >= args.posting_start_hour:
+        if local_posted_at.date() == today:
             posted_today = True
             break
 
