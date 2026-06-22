@@ -1,6 +1,9 @@
 name: Daily Instagram Post
 
 on:
+  push:
+    paths:
+      - ".github/workflows/daily-instagram-post.yml"
   schedule:
     # Run every 15 minutes from 18:00 to 23:45 JST.
     # GitHub-hosted schedules can be delayed or dropped, so a wider window
@@ -58,9 +61,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          POSTING_START_HOUR="18"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "${{ github.event_name }}" = "push" ]; then
+            POSTING_START_HOUR="0"
+          fi
           python scripts/check_posted_today.py \
             --posted-path posted_review_urls.csv \
-            --timezone Asia/Tokyo | tee posted_today.txt
+            --timezone Asia/Tokyo \
+            --posting-start-hour "${POSTING_START_HOUR}" | tee posted_today.txt
           SHOULD_POST="$(grep '^should_post=' posted_today.txt | cut -d= -f2-)"
           echo "should_post=${SHOULD_POST}" >> "$GITHUB_OUTPUT"
 
