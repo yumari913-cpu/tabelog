@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-FIELDS = ["投稿日時UTC", "店名", "レビューURL", "GitHub Run"]
+FIELDS = ["投稿対象日JST", "投稿日時UTC", "店名", "レビューURL", "GitHub Run"]
 
 
 def read_rows(path):
@@ -20,6 +20,7 @@ def main():
     parser.add_argument("--review-url", required=True)
     parser.add_argument("--restaurant-name", default="")
     parser.add_argument("--github-run", default="")
+    parser.add_argument("--target-date-jst", default="")
     args = parser.parse_args()
 
     path = Path(args.posted_path)
@@ -31,6 +32,7 @@ def main():
 
     rows.append(
         {
+            "投稿対象日JST": args.target_date_jst,
             "投稿日時UTC": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"),
             "店名": args.restaurant_name,
             "レビューURL": review_url,
