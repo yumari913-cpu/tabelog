@@ -1,6 +1,6 @@
 import argparse
 import csv
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -10,6 +10,24 @@ def read_rows(path):
         return []
     with path.open("r", encoding="utf-8-sig", newline="") as file:
         return list(csv.DictReader(file))
+
+
+def row_target_date(row, tz):
+    explicit = row.get("投稿対象日JST", "").strip()
+    if explicit:
+        try:
+            return date.fromisoformat(explicit)
+        except ValueError:
+            pass
+
+    value = row.get("投稿日時UTC", "").strip()
+    if not value:
+        return None
+    try:
+        posted_at = datetime.strptime(value, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+    return posted_at.astimezone(tz).date()
 
 
 def main():
@@ -22,29 +40,18 @@ def main():
     tz = ZoneInfo(args.timezone)
     now = datetime.now(tz)
     today = now.date()
-    posted_today = False
-
-    if now.hour < args.posting_start_hour:
-        print("posted_today=false")
-        print("should_post=false")
-        print(f"reason=before_posting_window_{args.posting_start_hour}")
-        return
+    target_date = today if now.hour >= args.posting_start_hour else today - timedelta(days=1)
+    posted_target_date = False
 
     for row in read_rows(Path(args.posted_path)):
-        value = row.get("投稿日時UTC", "").strip()
-        if not value:
-            continue
-        try:
-            posted_at = datetime.strptime(value, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
-        except ValueError:
-            continue
-        local_posted_at = posted_at.astimezone(tz)
-        if local_posted_at.date() == today:
-            posted_today = True
+        if row_target_date(row, tz) == target_date:
+            posted_target_date = True
             break
 
-    print(f"posted_today={str(posted_today).lower()}")
-    print(f"should_post={str(not posted_today).lower()}")
+    print(f"target_date_jst={target_date.isoformat()}")
+    print(f"posted_today={str(posted_target_date).lower()}")
+    print(f"posted_target_date={str(posted_target_date).lower()}")
+    print(f"should_post={str(not posted_target_date).lower()}")
 
 
 if __name__ == "__main__":
