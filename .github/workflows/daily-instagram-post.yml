@@ -5,10 +5,11 @@ on:
     paths:
       - ".github/workflows/daily-instagram-post.yml"
   schedule:
-    # Run every 15 minutes from 18:00 to 23:45 JST.
-    # GitHub-hosted schedules can be delayed or dropped, so a wider window
-    # gives the daily guard several chances to publish exactly once per day.
-    - cron: "0,15,30,45 9-14 * * *"
+    # Prime window: every 15 minutes from 20:00 to 23:45 JST.
+    - cron: "0,15,30,45 11-14 * * *"
+    # Safety net: hourly. If GitHub delays the prime window past midnight,
+    # the script posts the missed previous-day slot instead of skipping it.
+    - cron: "7 * * * *"
   workflow_dispatch:
     inputs:
       dry_run:
@@ -61,7 +62,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          POSTING_START_HOUR="18"
+          POSTING_START_HOUR="20"
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "${{ github.event_name }}" = "push" ]; then
             POSTING_START_HOUR="0"
           fi
@@ -70,7 +71,9 @@ jobs:
             --timezone Asia/Tokyo \
             --posting-start-hour "${POSTING_START_HOUR}" | tee posted_today.txt
           SHOULD_POST="$(grep '^should_post=' posted_today.txt | cut -d= -f2-)"
+          TARGET_DATE_JST="$(grep '^target_date_jst=' posted_today.txt | cut -d= -f2-)"
           echo "should_post=${SHOULD_POST}" >> "$GITHUB_OUTPUT"
+          echo "target_date_jst=${TARGET_DATE_JST}" >> "$GITHUB_OUTPUT"
 
       - name: Select next review
         if: steps.today.outputs.should_post == 'true'
@@ -158,6 +161,7 @@ jobs:
             --posted-path posted_review_urls.csv \
             --review-url "${{ steps.select.outputs.review_url }}" \
             --restaurant-name "${{ steps.select.outputs.restaurant_name }}" \
+            --target-date-jst "${{ steps.today.outputs.target_date_jst }}" \
             --github-run "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
       - name: Commit posted marker
