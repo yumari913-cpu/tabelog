@@ -35,25 +35,6 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install Japanese fonts
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y fonts-noto-cjk
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Apply caption policy
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          path = Path("tabelog_insta/scraper.py")
-          text = path.read_text(encoding="utf-8")
-          text = text.replace('    parts.append("後で見返せるように【保存】がおすすめです。次のお店選びに使ってください。")\n\n', '')
-          path.write_text(text, encoding="utf-8")
-          PY
-
       - name: Check whether today's post is already done
         id: today
         shell: bash
@@ -90,6 +71,28 @@ jobs:
       - name: Stop when all reviews are posted
         if: steps.today.outputs.should_post == 'true' && steps.select.outputs.has_next != 'true'
         run: echo "All review URLs have already been posted."
+
+      - name: Install Japanese fonts
+        if: steps.today.outputs.should_post == 'true' && steps.select.outputs.has_next == 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk
+
+      - name: Install dependencies
+        if: steps.today.outputs.should_post == 'true' && steps.select.outputs.has_next == 'true'
+        run: pip install -r requirements.txt
+
+      - name: Apply caption policy
+        if: steps.today.outputs.should_post == 'true' && steps.select.outputs.has_next == 'true'
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("tabelog_insta/scraper.py")
+          text = path.read_text(encoding="utf-8")
+          text = text.replace('    parts.append("後で見返せるように【保存】がおすすめです。次のお店選びに使ってください。")\n\n', '')
+          path.write_text(text, encoding="utf-8")
+          PY
 
       - name: Build post assets
         if: steps.today.outputs.should_post == 'true' && steps.select.outputs.has_next == 'true'
