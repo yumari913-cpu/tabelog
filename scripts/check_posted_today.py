@@ -1,6 +1,6 @@
 import argparse
 import csv
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -34,13 +34,11 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--posted-path", default="posted_review_urls.csv")
     parser.add_argument("--timezone", default="Asia/Tokyo")
-    parser.add_argument("--posting-start-hour", type=int, default=18)
+    parser.add_argument("--posting-start-hour", type=int, default=0)
     args = parser.parse_args()
 
     tz = ZoneInfo(args.timezone)
-    now = datetime.now(tz)
-    today = now.date()
-    target_date = today if now.hour >= args.posting_start_hour else today - timedelta(days=1)
+    target_date = datetime.now(tz).date()
     posted_target_date = False
 
     for row in read_rows(Path(args.posted_path)):
