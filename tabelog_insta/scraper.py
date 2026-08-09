@@ -1,6 +1,8 @@
 import html
 import json
 import re
+import shutil
+import subprocess
 import time
 from html.parser import HTMLParser
 from urllib.parse import urljoin
@@ -22,6 +24,15 @@ DEFAULT_HEADERS = {
 
 
 def fetch(url):
+    curl = shutil.which("curl")
+    if curl:
+        command = [curl, "-fsSL", "--compressed"]
+        for key, value in DEFAULT_HEADERS.items():
+            command.extend(["-H", f"{key}: {value}"])
+        command.append(url)
+        result = subprocess.run(command, check=True, capture_output=True, timeout=30)
+        return result.stdout.decode("utf-8", errors="replace")
+
     req = Request(url, headers=DEFAULT_HEADERS)
     with urlopen(req, timeout=30) as res:
         return res.read().decode("utf-8", errors="replace")
@@ -433,8 +444,6 @@ def build_caption(
         "ひとりでサクッと寄りたい日にも、誰かとゆっくり話したい日にも候補に入れておきたいお店です。",
     ]
     parts.append("\n".join(scene_lines))
-
-    parts.append("後で見返せるように【保存】がおすすめです。次のお店選びに使ってください。")
 
     parts.append(
         "\n".join(
