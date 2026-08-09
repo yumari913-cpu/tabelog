@@ -4,6 +4,8 @@ on:
   push:
     paths:
       - ".github/workflows/daily-instagram-post.yml"
+      - "scripts/**"
+      - "tabelog_insta/**"
   schedule:
     # Run hourly. The script posts only if today's JST target date is not posted yet.
     - cron: "7 * * * *"
