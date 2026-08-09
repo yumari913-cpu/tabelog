@@ -15,6 +15,7 @@ from tabelog_insta.media import (
     select_best_image_urls,
 )
 from tabelog_insta.scraper import build_caption, parse_detail
+from tabelog_insta.scraper import extract_review_id
 
 
 def validate_review_url(review_url):
@@ -36,6 +37,31 @@ def main():
     validate_review_url(args.review_url)
 
     config = load_config()
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(exist_ok=True)
+
+    review_id = extract_review_id(args.review_url)
+    manifest_path = output_dir / f"{review_id}_post.json"
+    if manifest_path.exists():
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        expected_paths = [
+            manifest.get("cover_path"),
+            manifest.get("story_path"),
+            manifest.get("caption"),
+            *manifest.get("image_paths", []),
+        ]
+        local_paths = [
+            path
+            for path in expected_paths
+            if isinstance(path, str) and path and (path.endswith(".jpg") or path.endswith(".jpeg") or path.endswith(".png"))
+        ]
+        if local_paths and all(Path(path).exists() for path in local_paths):
+            print(f"review_id={review_id}")
+            print(f"manifest={manifest_path}")
+            print(f"cover={manifest.get('cover_path', '')}")
+            print(f"story={manifest.get('story_path', '')}")
+            return
+
     review = parse_detail(args.review_url)
     review["image_urls"] = select_best_image_urls(
         review.get("image_urls", []),
@@ -54,9 +80,6 @@ def main():
         business_hours=review.get("business_hours", ""),
         regular_holiday=review.get("regular_holiday", ""),
     )
-
-    output_dir = Path(args.output_dir)
-    output_dir.mkdir(exist_ok=True)
 
     cover_path = generate_feed_cover_image(review)
     public_cover = output_dir / f"{review['review_id']}_feed_cover.jpg"
