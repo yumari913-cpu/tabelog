@@ -10,7 +10,17 @@ from urllib.request import Request, urlopen
 from .config import MEDIA_DIR, ensure_dirs
 
 
-USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X) TabelogInstagramBot/1.0"
+USER_AGENT = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+    "AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/124.0.0.0 Safari/537.36"
+)
+DEFAULT_HEADERS = {
+    "User-Agent": USER_AGENT,
+    "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8",
+    "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
+    "Referer": "https://tabelog.com/",
+}
 
 
 def safe_name(value):
@@ -24,9 +34,17 @@ def download_image(url, review_id, index=0):
     path = MEDIA_DIR / f"{review_id}_{index}{ext}"
     if path.exists():
         return path
-    req = Request(url, headers={"User-Agent": USER_AGENT})
-    with urlopen(req, timeout=30) as res:
-        path.write_bytes(res.read())
+    curl = shutil.which("curl")
+    if curl:
+        command = [curl, "-fsSL", "--compressed"]
+        for key, value in DEFAULT_HEADERS.items():
+            command.extend(["-H", f"{key}: {value}"])
+        command.extend(["-o", str(path), url])
+        subprocess.run(command, check=True, timeout=30)
+    else:
+        req = Request(url, headers=DEFAULT_HEADERS)
+        with urlopen(req, timeout=30) as res:
+            path.write_bytes(res.read())
     return path
 
 
