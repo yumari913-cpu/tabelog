@@ -1,8 +1,10 @@
 import hashlib
 import io
 import math
+import re
 import shutil
 import subprocess
+import tempfile
 import zipfile
 from pathlib import Path
 from urllib.request import Request, urlopen
@@ -36,11 +38,41 @@ def download_image(url, review_id, index=0):
         return path
     curl = shutil.which("curl")
     if curl:
-        command = [curl, "-fsSL", "--compressed"]
-        for key, value in DEFAULT_HEADERS.items():
-            command.extend(["-H", f"{key}: {value}"])
-        command.extend(["-o", str(path), url])
-        subprocess.run(command, check=True, timeout=30)
+        with tempfile.NamedTemporaryFile() as cookie_file:
+            warmup_command = [curl, "-fsSL", "--compressed", "--http1.1", "-c", cookie_file.name]
+            for key, value in DEFAULT_HEADERS.items():
+                warmup_command.extend(["-H", f"{key}: {value}"])
+            warmup_command.append("https://tabelog.com/")
+            subprocess.run(warmup_command, check=False, capture_output=True, timeout=30)
+
+            last_error = None
+            for http_option in ("--http1.1", "--http2"):
+                command = [
+                    curl,
+                    "-fsSL",
+                    "--compressed",
+                    http_option,
+                    "-b",
+                    cookie_file.name,
+                    "-c",
+                    cookie_file.name,
+                    "--retry",
+                    "3",
+                    "--retry-delay",
+                    "2",
+                    "--retry-all-errors",
+                ]
+                for key, value in DEFAULT_HEADERS.items():
+                    command.extend(["-H", f"{key}: {value}"])
+                command.extend(["-o", str(path), url])
+                try:
+                    subprocess.run(command, check=True, timeout=45)
+                    break
+                except subprocess.CalledProcessError as exc:
+                    last_error = exc
+            else:
+                if last_error:
+                    raise last_error
     else:
         req = Request(url, headers=DEFAULT_HEADERS)
         with urlopen(req, timeout=30) as res:
@@ -67,6 +99,21 @@ def font(size, bold=False):
 
 
 def wrap_text(draw, text, text_font, max_width):
+    if " " in text and re.search(r"[A-Za-z]", text):
+        lines = []
+        current = ""
+        for word in text.split():
+            test = f"{current} {word}".strip()
+            box = draw.textbbox((0, 0), test, font=text_font)
+            if box[2] - box[0] <= max_width or not current:
+                current = test
+            else:
+                lines.append(current)
+                current = word
+        if current:
+            lines.append(current)
+        return lines
+
     lines = []
     current = ""
     for char in text:
