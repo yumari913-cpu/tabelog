@@ -3,6 +3,7 @@ import json
 import re
 import shutil
 import subprocess
+import tempfile
 import time
 from html.parser import HTMLParser
 from urllib.parse import urljoin
@@ -26,12 +27,41 @@ DEFAULT_HEADERS = {
 def fetch(url):
     curl = shutil.which("curl")
     if curl:
-        command = [curl, "-fsSL", "--compressed"]
-        for key, value in DEFAULT_HEADERS.items():
-            command.extend(["-H", f"{key}: {value}"])
-        command.append(url)
-        result = subprocess.run(command, check=True, capture_output=True, timeout=30)
-        return result.stdout.decode("utf-8", errors="replace")
+        with tempfile.NamedTemporaryFile() as cookie_file:
+            warmup_command = [curl, "-fsSL", "--compressed", "--http1.1", "-c", cookie_file.name]
+            for key, value in DEFAULT_HEADERS.items():
+                warmup_command.extend(["-H", f"{key}: {value}"])
+            warmup_command.append(BASE_URL + "/")
+            subprocess.run(warmup_command, check=False, capture_output=True, timeout=30)
+
+            last_error = None
+            for http_option in ("--http1.1", "--http2"):
+                command = [
+                    curl,
+                    "-fsSL",
+                    "--compressed",
+                    http_option,
+                    "-b",
+                    cookie_file.name,
+                    "-c",
+                    cookie_file.name,
+                    "--retry",
+                    "3",
+                    "--retry-delay",
+                    "2",
+                    "--retry-all-errors",
+                ]
+                for key, value in DEFAULT_HEADERS.items():
+                    command.extend(["-H", f"{key}: {value}"])
+                command.append(url)
+                try:
+                    result = subprocess.run(command, check=True, capture_output=True, timeout=45)
+                    return result.stdout.decode("utf-8", errors="replace")
+                except subprocess.CalledProcessError as exc:
+                    last_error = exc
+                    time.sleep(2)
+            if last_error:
+                raise last_error
 
     req = Request(url, headers=DEFAULT_HEADERS)
     with urlopen(req, timeout=30) as res:
