@@ -1,5 +1,6 @@
 import json
 import os
+import boto3
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
@@ -8,13 +9,41 @@ def env(name, default=""):
     return os.getenv(name, default).strip()
 
 
-def dispatch_workflow(workflow, inputs=None):
+def get_github_token():
     token = env("GITHUB_TOKEN")
+    if token:
+        return token
+
+    secret_id = env("GITHUB_TOKEN_SECRET_ID")
+    if not secret_id:
+        raise RuntimeError("GITHUB_TOKEN_SECRET_ID or GITHUB_TOKEN is required.")
+
+    client = boto3.client("secretsmanager")
+    response = client.get_secret_value(SecretId=secret_id)
+    secret = response.get("SecretString", "")
+    if not secret:
+        raise RuntimeError("GitHub token secret is empty.")
+
+    try:
+        parsed = json.loads(secret)
+    except json.JSONDecodeError:
+        return secret.strip()
+
+    return (
+        parsed.get("GITHUB_TOKEN")
+        or parsed.get("github_token")
+        or parsed.get("token")
+        or ""
+    ).strip()
+
+
+def dispatch_workflow(workflow, inputs=None):
+    token = get_github_token()
     owner = env("GITHUB_OWNER", "yumari913-cpu")
     repo = env("GITHUB_REPO", "tabelog")
     ref = env("GITHUB_REF", "main")
     if not token:
-        raise RuntimeError("GITHUB_TOKEN is required.")
+        raise RuntimeError("GitHub token is required.")
 
     payload = {"ref": ref}
     if inputs:
