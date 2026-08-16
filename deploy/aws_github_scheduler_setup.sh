@@ -18,6 +18,11 @@ if ! command -v python3 >/dev/null 2>&1; then
   exit 1
 fi
 
+if [ -z "${GITHUB_TOKEN:-}" ] && [ -t 0 ]; then
+  read -r -s -p "GitHub token for first deploy or rotation. Press Enter to reuse existing secret: " GITHUB_TOKEN
+  echo
+fi
+
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="/tmp/${APP_NAME}-build"
 ZIP_PATH="/tmp/${APP_NAME}.zip"
