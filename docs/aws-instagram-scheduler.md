@@ -35,17 +35,21 @@ Keep this token private.
 
 1. Open AWS CloudShell in the Tokyo region.
 2. Upload or clone this repository.
-3. For the first deploy, set the GitHub token:
+3. Run:
+
+```bash
+export AWS_REGION=ap-northeast-1
+chmod +x deploy/aws_github_scheduler_setup.sh
+./deploy/aws_github_scheduler_setup.sh
+```
+
+4. When prompted, paste the GitHub token. The input is hidden and is saved to Secrets Manager.
+
+If you prefer environment variables in a temporary shell, this also works:
 
 ```bash
 export AWS_REGION=ap-northeast-1
 export GITHUB_TOKEN='YOUR_GITHUB_FINE_GRAINED_TOKEN'
-```
-
-4. Run:
-
-```bash
-chmod +x deploy/aws_github_scheduler_setup.sh
 ./deploy/aws_github_scheduler_setup.sh
 ```
 
@@ -110,11 +114,10 @@ When the GitHub token expires or needs replacement:
 
 ```bash
 export AWS_REGION=ap-northeast-1
-export GITHUB_TOKEN='NEW_GITHUB_FINE_GRAINED_TOKEN'
 ./deploy/aws_github_scheduler_setup.sh
 ```
 
-The script updates the existing Secrets Manager value and keeps the Lambda/Scheduler configuration unchanged.
+Paste the new token when prompted. The script updates the existing Secrets Manager value and keeps the Lambda/Scheduler configuration unchanged.
 
 ## After AWS Is Confirmed
 
