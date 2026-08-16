@@ -6,6 +6,7 @@ AWS_REGION="${AWS_REGION:-ap-northeast-1}"
 GITHUB_OWNER="${GITHUB_OWNER:-yumari913-cpu}"
 GITHUB_REPO="${GITHUB_REPO:-tabelog}"
 GITHUB_REF="${GITHUB_REF:-main}"
+GITHUB_TOKEN_SECRET_NAME="${GITHUB_TOKEN_SECRET_NAME:-/${APP_NAME}/github-token}"
 
 if ! command -v aws >/dev/null 2>&1; then
   echo "aws CLI is required. Run this script in AWS CloudShell or install AWS CLI locally." >&2
@@ -14,11 +15,6 @@ fi
 
 if ! command -v python3 >/dev/null 2>&1; then
   echo "python3 is required." >&2
-  exit 1
-fi
-
-if [ -z "${GITHUB_TOKEN:-}" ]; then
-  echo "Set GITHUB_TOKEN before running. It needs Actions: write permission for ${GITHUB_OWNER}/${GITHUB_REPO}." >&2
   exit 1
 fi
 
@@ -36,6 +32,33 @@ cp "${ROOT_DIR}/aws_scheduler/trigger_github_workflow.py" "${BUILD_DIR}/lambda_f
 ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
 LAMBDA_ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/${LAMBDA_ROLE_NAME}"
 SCHEDULER_ROLE_ARN="arn:aws:iam::${ACCOUNT_ID}:role/${SCHEDULER_ROLE_NAME}"
+SECRET_ARN=""
+
+if aws secretsmanager describe-secret --secret-id "${GITHUB_TOKEN_SECRET_NAME}" --region "${AWS_REGION}" >/dev/null 2>&1; then
+  SECRET_ARN="$(aws secretsmanager describe-secret --secret-id "${GITHUB_TOKEN_SECRET_NAME}" --region "${AWS_REGION}" --query ARN --output text)"
+  if [ -n "${GITHUB_TOKEN:-}" ]; then
+    aws secretsmanager put-secret-value \
+      --secret-id "${GITHUB_TOKEN_SECRET_NAME}" \
+      --secret-string "${GITHUB_TOKEN}" \
+      --region "${AWS_REGION}" >/dev/null
+    echo "Updated GitHub token secret: ${GITHUB_TOKEN_SECRET_NAME}"
+  else
+    echo "Using existing GitHub token secret: ${GITHUB_TOKEN_SECRET_NAME}"
+  fi
+else
+  if [ -z "${GITHUB_TOKEN:-}" ]; then
+    echo "Secret ${GITHUB_TOKEN_SECRET_NAME} does not exist. Set GITHUB_TOKEN for the first deploy." >&2
+    echo "It needs Actions: write permission for ${GITHUB_OWNER}/${GITHUB_REPO}." >&2
+    exit 1
+  fi
+  SECRET_ARN="$(aws secretsmanager create-secret \
+    --name "${GITHUB_TOKEN_SECRET_NAME}" \
+    --secret-string "${GITHUB_TOKEN}" \
+    --region "${AWS_REGION}" \
+    --query ARN \
+    --output text)"
+  echo "Created GitHub token secret: ${GITHUB_TOKEN_SECRET_NAME}"
+fi
 
 if ! aws iam get-role --role-name "${LAMBDA_ROLE_NAME}" >/dev/null 2>&1; then
   aws iam create-role \
@@ -47,6 +70,11 @@ if ! aws iam get-role --role-name "${LAMBDA_ROLE_NAME}" >/dev/null 2>&1; then
   echo "Created Lambda role. Waiting for IAM propagation..."
   sleep 12
 fi
+
+aws iam put-role-policy \
+  --role-name "${LAMBDA_ROLE_NAME}" \
+  --policy-name "${APP_NAME}-read-github-token-secret" \
+  --policy-document "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Action\":\"secretsmanager:GetSecretValue\",\"Resource\":\"${SECRET_ARN}\"}]}" >/dev/null
 
 if aws lambda get-function --function-name "${APP_NAME}" --region "${AWS_REGION}" >/dev/null 2>&1; then
   aws lambda update-function-code \
@@ -68,7 +96,7 @@ fi
 aws lambda update-function-configuration \
   --function-name "${APP_NAME}" \
   --region "${AWS_REGION}" \
-  --environment "Variables={GITHUB_TOKEN=${GITHUB_TOKEN},GITHUB_OWNER=${GITHUB_OWNER},GITHUB_REPO=${GITHUB_REPO},GITHUB_REF=${GITHUB_REF}}" >/dev/null
+  --environment "Variables={GITHUB_TOKEN_SECRET_ID=${GITHUB_TOKEN_SECRET_NAME},GITHUB_OWNER=${GITHUB_OWNER},GITHUB_REPO=${GITHUB_REPO},GITHUB_REF=${GITHUB_REF}}" >/dev/null
 
 if ! aws iam get-role --role-name "${SCHEDULER_ROLE_NAME}" >/dev/null 2>&1; then
   aws iam create-role \
@@ -92,7 +120,7 @@ upsert_schedule() {
       --schedule-expression "${expression}" \
       --schedule-expression-timezone "Asia/Tokyo" \
       --flexible-time-window '{"Mode":"OFF"}' \
-      --target "{\"Arn\":\"${LAMBDA_ARN}\",\"RoleArn\":\"${SCHEDULER_ROLE_ARN}\",\"Input\":\"${input//\"/\\\"}\"}" \
+      --target "{\"Arn\":\"${LAMBDA_ARN}\",\"RoleArn\":\"${SCHEDULER_ROLE_ARN}\",\"Input\":\"${input//"/\\\"}\"}" \
       --region "${AWS_REGION}" >/dev/null
   else
     aws scheduler create-schedule \
@@ -100,7 +128,7 @@ upsert_schedule() {
       --schedule-expression "${expression}" \
       --schedule-expression-timezone "Asia/Tokyo" \
       --flexible-time-window '{"Mode":"OFF"}' \
-      --target "{\"Arn\":\"${LAMBDA_ARN}\",\"RoleArn\":\"${SCHEDULER_ROLE_ARN}\",\"Input\":\"${input//\"/\\\"}\"}" \
+      --target "{\"Arn\":\"${LAMBDA_ARN}\",\"RoleArn\":\"${SCHEDULER_ROLE_ARN}\",\"Input\":\"${input//"/\\\"}\"}" \
       --region "${AWS_REGION}" >/dev/null
   fi
 }
@@ -112,3 +140,4 @@ echo "AWS scheduler migration is ready."
 echo "Daily Instagram post trigger: 20:00 JST"
 echo "Weekly Tabelog URL sync trigger: Monday 10:00 JST"
 echo "Lambda: ${APP_NAME}"
+echo "GitHub token secret: ${GITHUB_TOKEN_SECRET_NAME}"
