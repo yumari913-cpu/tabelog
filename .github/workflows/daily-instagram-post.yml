@@ -7,7 +7,7 @@ on:
       - "scripts/**"
       - "tabelog_insta/**"
   schedule:
-    # Run hourly. The script posts only if today's JST target date is not posted yet.
+    # Run hourly. The script posts only if today's JST target date is not posted yet. Keep workflow_dispatch for manual recovery.
     - cron: "7 * * * *"
   workflow_dispatch:
     inputs:
