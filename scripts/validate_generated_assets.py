@@ -108,7 +108,9 @@ def validate_story_text_block_position(image):
     top = min(ys)
     bottom = max(ys)
     center = (top + bottom) / 2
-    if top < 620 or bottom > 1280 or center < 870 or center > 1080:
+    # The story card may grow vertically for long restaurant names. Keep the
+    # check focused on real layout failures: off-screen, too high, or too low.
+    if top < 560 or bottom > 1500 or center < 760 or center > 1160:
         raise ValueError(
             "story image text card is not centered in the safe area "
             f"(top={top}, bottom={bottom}, center={center:.1f})."
