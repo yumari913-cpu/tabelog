@@ -60,8 +60,10 @@ def fetch(url):
                 except subprocess.CalledProcessError as exc:
                     last_error = exc
                     time.sleep(2)
+            # curl may be reset by Tabelog on hosted runners. Fall through to
+            # Python's HTTP client, which uses a different TLS/HTTP stack.
             if last_error:
-                raise last_error
+                time.sleep(1)
 
     req = Request(url, headers=DEFAULT_HEADERS)
     with urlopen(req, timeout=30) as res:
