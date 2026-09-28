@@ -22,11 +22,11 @@ on:
 
 concurrency:
   group: daily-instagram-post
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   post:
-    runs-on: macos-13
+    runs-on: ubuntu-latest
     permissions:
       contents: write
 
@@ -74,10 +74,11 @@ jobs:
         if: steps.today.outputs.should_post == 'true' && steps.select.outputs.has_next != 'true'
         run: echo "All review URLs have already been posted."
 
-      - name: Confirm Japanese fonts
+      - name: Install Japanese fonts
         if: steps.today.outputs.should_post == 'true' && steps.select.outputs.has_next == 'true'
         run: |
-          echo "Using Japanese fonts bundled with macOS runner."
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk
 
       - name: Install dependencies
         if: steps.today.outputs.should_post == 'true' && steps.select.outputs.has_next == 'true'
