@@ -98,7 +98,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          REVIEW_ID="$(python -c "import re,sys; print(re.search(r\'/rvwdtl/(B[0-9]+)/\', sys.argv[1]).group(1))" "${{ steps.select.outputs.review_url }}")"
+          REVIEW_URL="${{ steps.select.outputs.review_url }}"
+          REVIEW_ID="${REVIEW_URL#*/rvwdtl/}"
+          REVIEW_ID="${REVIEW_ID%%/*}"
           MANIFEST="generated/${REVIEW_ID}_post.json"
           if [ ! -f "${MANIFEST}" ]; then
             echo "::error::Prepared assets are missing for ${REVIEW_ID}. Run the weekly Mac preparation."
