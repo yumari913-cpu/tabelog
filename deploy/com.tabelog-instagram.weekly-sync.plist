@@ -7,7 +7,7 @@
   <key>ProgramArguments</key>
   <array>
     <string>/bin/bash</string>
-    <string>/Users/sasakiyuusuke/Documents/食べログ×Instagram/scripts/mac_weekly_sync.sh</string>
+    <string>/Users/sasakiyuusuke/Library/Application Support/TabelogInstagram/mac_weekly_sync.sh</string>
   </array>
   <key>StartCalendarInterval</key>
   <dict>
@@ -19,8 +19,8 @@
     <integer>0</integer>
   </dict>
   <key>StandardOutPath</key>
-  <string>/Users/sasakiyuusuke/Documents/食べログ×Instagram/logs/launchd-weekly-sync.log</string>
+  <string>/Users/sasakiyuusuke/Library/Application Support/TabelogInstagram/logs/launchd-weekly-sync.log</string>
   <key>StandardErrorPath</key>
-  <string>/Users/sasakiyuusuke/Documents/食べログ×Instagram/logs/launchd-weekly-sync-error.log</string>
+  <string>/Users/sasakiyuusuke/Library/Application Support/TabelogInstagram/logs/launchd-weekly-sync-error.log</string>
 </dict>
 </plist>
