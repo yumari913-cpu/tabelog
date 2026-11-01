@@ -1,37 +1,38 @@
 # Instagram Growth Analysis
 
-Generated at: 2026-10-25T16:55:43+00:00
+Generated at: 2026-11-01T18:11:41+00:00
 
 ## Reach Top Posts
-- スルパン / 新宿三丁目 / reach=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"ARUZHHenFztAFf6inzNppDf"}} / saved=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"A7sJsi68ofPMReArrWAi6Ew"}} / https://www.instagram.com/p/De7GAb2DjhW/
-- 肉問屋 焼肉 池袋いちば / 池袋 / reach=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"AFfJ0RlG81HIRAQUXONrDhV"}} / saved=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"AfjRxzsqEXEyoLC6ING-bwT"}} / https://www.instagram.com/p/De4u-_DmL8X/
-- ブリーズウェイ・バイツ / 東京ディズニーシー・ステーション / reach=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"AJHV4mVcNZgEx0bNP5ZvUe-"}} / saved=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"A5L4tqieaE4kx6P9zHBVMvE"}} / https://www.instagram.com/p/De2RULWGMKB/
-- ユカタン・ベースキャンプ・グリル / ベイサイド・ステーション / reach=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"AJ0x5nZQutm_VHRuh9sgSBh"}} / saved=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"AH-QcS-tUBXtiCfg0FZSXBM"}} / https://www.instagram.com/p/DezRfpEjbHP/
-- 炭火焼鳥 酉壱 神田西口店 / 神田 / reach=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"A8PM05pgPMCGOy2OJdgVMUl"}} / saved=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"As0Z2bxfICsymuSoqxYYRLx"}} / https://www.instagram.com/p/Dewse_2F8S6/
+- 煮干し中華そば 江古田 三四郎 / 江古田 / reach=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"A4jL8ulQca6X8bR6mwUmGlQ"}} / saved=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"A4V3ZXGJ3-LjvGfaio0PQGp"}} / https://www.instagram.com/p/DfF1xOSjOQq/
+- とんかつまるや 新橋駅前本店 / 新橋 / reach=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"AZ9HCCDa6j9moCadLOlMaXF"}} / saved=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"AARJmIDNlr9RVTzWI20TpWW"}} / https://www.instagram.com/p/DfCzoLFk0jp/
+- 四季邸 新宿パレットビル店 / 新宿西口 / reach=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"A0zdBswpIgve0Dg6X7tA4Ws"}} / saved=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"A-15gGzYiP5BZw7NUaliNm-"}} / https://www.instagram.com/p/DfAScapGxQF/
+- 原価ビストロBAN！ 新橋2丁目 / 内幸町 / reach=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"AP-pdjXDrAnWyCCkzdtL7jP"}} / saved=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"AfT2NXAdDtSnpH02d8UyPH5"}} / https://www.instagram.com/p/De-AXu7D2qa/
+- スルパン / 新宿三丁目 / reach=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"AlmHiee1EPd6Hbv0Ze-gTkE"}} / saved=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"AGL1if7nO-FIvKSD5DEKpAV"}} / https://www.instagram.com/p/De7GAb2DjhW/
 
 ## Saved Top Posts
-- スルパン / 新宿三丁目 / reach=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"ARUZHHenFztAFf6inzNppDf"}} / saved=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"A7sJsi68ofPMReArrWAi6Ew"}} / https://www.instagram.com/p/De7GAb2DjhW/
-- 肉問屋 焼肉 池袋いちば / 池袋 / reach=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"AFfJ0RlG81HIRAQUXONrDhV"}} / saved=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"AfjRxzsqEXEyoLC6ING-bwT"}} / https://www.instagram.com/p/De4u-_DmL8X/
-- ブリーズウェイ・バイツ / 東京ディズニーシー・ステーション / reach=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"AJHV4mVcNZgEx0bNP5ZvUe-"}} / saved=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"A5L4tqieaE4kx6P9zHBVMvE"}} / https://www.instagram.com/p/De2RULWGMKB/
-- ユカタン・ベースキャンプ・グリル / ベイサイド・ステーション / reach=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"AJ0x5nZQutm_VHRuh9sgSBh"}} / saved=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"AH-QcS-tUBXtiCfg0FZSXBM"}} / https://www.instagram.com/p/DezRfpEjbHP/
-- 炭火焼鳥 酉壱 神田西口店 / 神田 / reach=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"A8PM05pgPMCGOy2OJdgVMUl"}} / saved=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"As0Z2bxfICsymuSoqxYYRLx"}} / https://www.instagram.com/p/Dewse_2F8S6/
+- 煮干し中華そば 江古田 三四郎 / 江古田 / reach=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"A4jL8ulQca6X8bR6mwUmGlQ"}} / saved=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"A4V3ZXGJ3-LjvGfaio0PQGp"}} / https://www.instagram.com/p/DfF1xOSjOQq/
+- とんかつまるや 新橋駅前本店 / 新橋 / reach=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"AZ9HCCDa6j9moCadLOlMaXF"}} / saved=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"AARJmIDNlr9RVTzWI20TpWW"}} / https://www.instagram.com/p/DfCzoLFk0jp/
+- 四季邸 新宿パレットビル店 / 新宿西口 / reach=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"A0zdBswpIgve0Dg6X7tA4Ws"}} / saved=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"A-15gGzYiP5BZw7NUaliNm-"}} / https://www.instagram.com/p/DfAScapGxQF/
+- 原価ビストロBAN！ 新橋2丁目 / 内幸町 / reach=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"AP-pdjXDrAnWyCCkzdtL7jP"}} / saved=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"AfT2NXAdDtSnpH02d8UyPH5"}} / https://www.instagram.com/p/De-AXu7D2qa/
+- スルパン / 新宿三丁目 / reach=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"AlmHiee1EPd6Hbv0Ze-gTkE"}} / saved=unsupported: Instagram API error 400: {"error":{"message":"(#10) Application does not have permission for this action","code":10,"type":"OAuthException","fbtrace_id":"AGL1if7nO-FIvKSD5DEKpAV"}} / https://www.instagram.com/p/De7GAb2DjhW/
 
 ## Areas To Lean Into
-- 新宿三丁目: posts=2, avg_reach=0.0, avg_saved=0.0
+- 江古田: posts=2, avg_reach=0.0, avg_saved=0.0
+- 新橋: posts=4, avg_reach=0.0, avg_saved=0.0
+- 新宿西口: posts=1, avg_reach=0.0, avg_saved=0.0
+- 内幸町: posts=1, avg_reach=0.0, avg_saved=0.0
+- 新宿三丁目: posts=1, avg_reach=0.0, avg_saved=0.0
 - 池袋: posts=4, avg_reach=0.0, avg_saved=0.0
 - 東京ディズニーシー・ステーション: posts=2, avg_reach=0.0, avg_saved=0.0
 - ベイサイド・ステーション: posts=1, avg_reach=0.0, avg_saved=0.0
-- 神田: posts=1, avg_reach=0.0, avg_saved=0.0
-- 中野: posts=1, avg_reach=0.0, avg_saved=0.0
-- 新橋: posts=3, avg_reach=0.0, avg_saved=0.0
-- 渋谷: posts=1, avg_reach=0.0, avg_saved=0.0
 
 ## Genres To Lean Into
-- ベーカリー: posts=3, avg_reach=0.0, avg_saved=0.0
+- ラーメン: posts=1, avg_reach=0.0, avg_saved=0.0
+- グルメ: posts=13, avg_reach=0.0, avg_saved=0.0
+- ベーカリー: posts=4, avg_reach=0.0, avg_saved=0.0
 - 焼肉: posts=1, avg_reach=0.0, avg_saved=0.0
-- グルメ: posts=12, avg_reach=0.0, avg_saved=0.0
-- 居酒屋: posts=4, avg_reach=0.0, avg_saved=0.0
-- 中華: posts=4, avg_reach=0.0, avg_saved=0.0
+- 居酒屋: posts=3, avg_reach=0.0, avg_saved=0.0
+- 中華: posts=2, avg_reach=0.0, avg_saved=0.0
 - スイーツ: posts=1, avg_reach=0.0, avg_saved=0.0
 
 ## Next Actions
